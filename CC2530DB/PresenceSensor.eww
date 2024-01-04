@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<workspace>
+    <project>
+        <path>$WS_DIR$\PresenceSensor.ewp</path>
+    </project>
+    <batchBuild>
+        <batchDefinition>
+            <name>ALL</name>
+            <member>
+                <project>PresenceSensor</project>
+                <configuration>PresenceSensor_EndDevice</configuration>
+            </member>
+            <member>
+                <project>PresenceSensor</project>
+                <configuration>PresenceSensor_Router</configuration>
+            </member>
+            <member>
+                <project>PresenceSensor</project>
+                <configuration>PresenceSensor_Router_CC2592</configuration>
+            </member>
+            <member>
+                <project>PresenceSensor</project>
+                <configuration>PresenceSensor_EndDevice_CC2592</configuration>
+            </member>
+            <member>
+                <project>PresenceSensor</project>
+                <configuration>PresenceSensor_EndDevice_CC2591</configuration>
+            </member>
+            <member>
+                <project>PresenceSensor</project>
+                <configuration>PresenceSensor_Router_CC2591</configuration>
+            </member>
+        </batchDefinition>
+    </batchBuild>
+</workspace>
