@@ -45,7 +45,6 @@ const uint16 zclApp_clusterRevision_all = 0x0002;
 bool    zclApp_Occupied = FALSE; 
 uint16  zclApp_IlluminanceSensor_MeasuredValue = 0;
 bool    zclApp_Output = FALSE;
-bool    zclApp_Led = FALSE;
 uint32  zclApp_GenTime_TimeUTC = 0;
 
 // Basic Cluster
@@ -61,7 +60,6 @@ const uint8 zclApp_PowerSource = POWER_SOURCE_MAINS_1_PHASE;
 
 #define DEFAULT_SensorEnabled   TRUE
 #define DEFAULT_LedEnabled      TRUE
-#define DEFAULT_EnableABC       TRUE
 #define DEFAULT_Threshold       0
 #define DEFAULT_TimeLow         0
 #define DEFAULT_TimeHigh        0
@@ -114,7 +112,7 @@ CONST zclAttrRec_t zclApp_AttrsSecondEP[] = {
 };
 
 CONST zclAttrRec_t zclApp_AttrsThirdEP[] = {
-    {GEN_ON_OFF, {ATTRID_ON_OFF, ZCL_BOOLEAN, RR, (void *)&zclApp_Led}},
+    {GEN_ON_OFF, {ATTRID_ON_OFF, ZCL_BOOLEAN, RR, (void *)&zclApp_Config.LedEnabled}},
     {GEN_ON_OFF, {ATTRID_CLUSTER_REVISION, ZCL_INT16, RW, (void *)&zclApp_clusterRevision_all}},
     {GEN_ON_OFF, {ATTRID_LED_TYPE, ZCL_DATATYPE_ENUM8, RW, (void *)&zclApp_Config.LedMode}},
 };

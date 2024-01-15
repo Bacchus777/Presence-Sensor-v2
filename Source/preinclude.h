@@ -45,10 +45,8 @@
 #endif
 
 #if defined(HAL_BOARD_TARGET)
-    #define HAL_KEY_P2_INPUT_PINS BV(2)
-    #define HAL_KEY_P2_INPUT_PINS_EDGE HAL_KEY_RISING_EDGE
-    #define HAL_UART_DMA 1
-    #define HAL_UART_ISR 0
+    #define HAL_KEY_P0_INPUT_PINS BV(1)
+    #define HAL_KEY_P0_INPUT_PINS_EDGE HAL_KEY_RISING_EDGE
     #define INT_HEAP_LEN (2256 - 0xE)
 #elif defined(HAL_BOARD_CHDTECH_DEV)
     #define HAL_KEY_P0_INPUT_PINS BV(1)
@@ -67,14 +65,10 @@
     #define INT_HEAP_LEN 2060
 #endif
 
-// #define INT_HEAP_LEN (2685 - 0x4B - 0xBB-0x50-0xae)
-// #define HAL_UART TRUE
-// #define HAL_UART_DMA 2
-
 #define HAL_UART TRUE
 
-#define TSENS_SBIT P0_0
-#define TSENS_BV BV(0)
+#define TSENS_SBIT P0_7
+#define TSENS_BV BV(7)
 #define TSENS_DIR P0DIR
 
 #ifndef FACTORY_RESET_BOOTCOUNTER_MAX_VALUE

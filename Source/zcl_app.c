@@ -290,6 +290,7 @@ static void zclApp_RestoreAttributesFromNV(void) {
         LREPMaster("Reading from NV\r\n");
         osal_nv_read(NW_APP_CONFIG, 0, sizeof(application_config_t), &zclApp_Config);
         applySensor();
+        applyLed();
     }
 }
 
@@ -339,10 +340,10 @@ void applySensor ( void )
   // если выключено
   if (zclApp_Config.SensorEnabled) {
     // иначе включаем светодиод 1
-    HalLedSet ( HAL_LED_1, HAL_LED_MODE_ON );
+    HalLedSet ( HAL_LED_2, HAL_LED_MODE_ON );
   } else {
     // то гасим светодиод 1
-    HalLedSet ( HAL_LED_1, HAL_LED_MODE_OFF );
+    HalLedSet ( HAL_LED_2, HAL_LED_MODE_OFF );
   }
 }
 
@@ -352,10 +353,10 @@ void applyLed ( void )
   // если выключено
   if (zclApp_Config.LedEnabled) {
     // иначе включаем светодиод 1
-    HalLedSet ( HAL_LED_2, HAL_LED_MODE_ON );
+    HalLedSet ( HAL_LED_1, HAL_LED_MODE_ON );
   } else {
     // то гасим светодиод 1
-    HalLedSet ( HAL_LED_2, HAL_LED_MODE_OFF );
+    HalLedSet ( HAL_LED_1, HAL_LED_MODE_OFF );
   }
 }
 
@@ -400,6 +401,7 @@ void zclApp_ReportOnOff(void) {
 // Информирование о присутствии
 void zclApp_ReportOutput(void) {
   bdb_RepChangedAttrValue(zclApp_SecondEP.EndPoint, GEN_ON_OFF, ATTRID_ON_OFF);
+  bdb_RepChangedAttrValue(zclApp_ThirdEP.EndPoint, GEN_ON_OFF, ATTRID_ON_OFF);
 
   if (zclApp_Output == 1)
     zclGeneral_SendOnOff_CmdOn(zclApp_SecondEP.EndPoint, &inderect_DstAddr, TRUE, bdb_getZCLFrameCounter());
@@ -416,12 +418,15 @@ static void zclApp_ReadIlluminance(void) {
   bdb_RepChangedAttrValue(zclApp_FirstEP.EndPoint, ILLUMINANCE, ATTRID_MS_ILLUMINANCE_MEASURED_VALUE);
 
   bool in_time = FALSE;
+  
   bool in_illuminance = (zclApp_IlluminanceSensor_MeasuredValue <= zclApp_Config.Threshold);
+  
   if (zclApp_Config.TimeLow <=  zclApp_Config.TimeHigh) {
     in_time = ((osal_getClock() >= zclApp_Config.TimeLow) & (osal_getClock() <= zclApp_Config.TimeHigh));
   } else {
     in_time = ((osal_getClock() < zclApp_Config.TimeLow) ^ (osal_getClock() > zclApp_Config.TimeHigh));
   }
+  
   LREP("in_time=%d\r\n", in_time);
   LREP("in_illuminance=%d\r\n", in_illuminance);
   LREP("led_mode=%d\r\n", zclApp_Config.LedMode);
@@ -430,6 +435,16 @@ static void zclApp_ReadIlluminance(void) {
     zclApp_Output = (zclApp_Output | (in_illuminance & in_time));
   } else {
     zclApp_Output = FALSE;
+  }
+
+  if (zclApp_Config.LedMode == LED_ALWAYS) {
+    updateLed(TRUE);
+  }
+  else if (zclApp_Config.LedMode == LED_NEVER) {
+    updateLed(FALSE);
+  }
+  else if (zclApp_Config.LedMode == LED_NIGHT) {
+    updateLed(zclApp_Occupied & !zclApp_Output);// & zclApp_Occupied & in_illuminance & in_time);
   }
   
   zclApp_ReportOutput();
