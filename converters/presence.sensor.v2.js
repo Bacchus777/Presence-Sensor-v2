@@ -1,10 +1,10 @@
 const zigbeeHerdsmanConverters = require('zigbee-herdsman-converters');
 
-const exposes = zigbeeHerdsmanConverters.exposes;
+const exposes = (zigbeeHerdsmanConverters.hasOwnProperty('exposes'))?zigbeeHerdsmanConverters.exposes:require("zigbee-herdsman-converters/lib/exposes");
 const ea = exposes.access;
 const e = exposes.presets;
-const fz = zigbeeHerdsmanConverters.fromZigbeeConverters;
-const tz = zigbeeHerdsmanConverters.toZigbeeConverters;
+const fz = zigbeeHerdsmanConverters.fromZigbeeConverters || zigbeeHerdsmanConverters.fromZigbee;
+const tz = zigbeeHerdsmanConverters.toZigbeeConverters || zigbeeHerdsmanConverters.toZigbee;
 const reporting = require('zigbee-herdsman-converters/lib/reporting');
 const utils = require('zigbee-herdsman-converters/lib/utils');
 const ZCL_DATATYPE_UINT16 = 0x21;
