@@ -469,7 +469,6 @@
                     <name>CCIncludePath2</name>
                     <state>$PROJ_DIR$</state>
                     <state>$PROJ_DIR$\..\Source</state>
-                    <state>$PROJ_DIR$\..\BME280_driver</state>
                     <state>$PROJ_DIR$\..\zstack-lib</state>
                     <state>$PROJ_DIR$\..\..\Source</state>
                     <state>$PROJ_DIR$\..\..\..\ZMain\TI2530DB</state>
@@ -5345,7 +5344,7 @@
                 </option>
                 <option>
                     <name>OutputFile</name>
-                    <state>GenericApp.d51</state>
+                    <state>PresenceSensor.d51</state>
                 </option>
                 <option>
                     <name>OutputFormat</name>
@@ -8056,7 +8055,7 @@
             <name>$PROJ_DIR$\..\..\..\..\..\Components\stack\bdb\bdb_touchlink.c</name>
         </file>
         <file>
-            <name>$PROJ_DIR$\..\..\..\..\..\Components\stack\bdb\bdb_touchlink.h</name>
+            <name>$PROJ_DIR$\..\..\..\..\..\Components\stack\bdb\bdb_touchLink.h</name>
         </file>
         <file>
             <name>$PROJ_DIR$\..\..\..\..\..\Components\stack\bdb\bdb_touchlink_target.c</name>

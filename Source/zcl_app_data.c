@@ -108,13 +108,11 @@ CONST zclAttrRec_t zclApp_AttrsFirstEP[] = {
 
 CONST zclAttrRec_t zclApp_AttrsSecondEP[] = {
     {GEN_ON_OFF, {ATTRID_ON_OFF, ZCL_BOOLEAN, RR, (void *)&zclApp_Output}},
-    {GEN_ON_OFF, {ATTRID_CLUSTER_REVISION, ZCL_INT16, RW, (void *)&zclApp_clusterRevision_all}},
 };
 
 CONST zclAttrRec_t zclApp_AttrsThirdEP[] = {
-    {GEN_ON_OFF, {ATTRID_ON_OFF, ZCL_BOOLEAN, RR, (void *)&zclApp_Config.LedEnabled}},
-    {GEN_ON_OFF, {ATTRID_CLUSTER_REVISION, ZCL_INT16, RW, (void *)&zclApp_clusterRevision_all}},
-    {GEN_ON_OFF, {ATTRID_LED_TYPE, ZCL_DATATYPE_ENUM8, RW, (void *)&zclApp_Config.LedMode}},
+    {GEN_ON_OFF, {ATTRID_ON_OFF, ZCL_BOOLEAN, RWR, (void *)&zclApp_Config.LedEnabled}},
+    {GEN_ON_OFF, {ATTRID_LED_MODE, ZCL_DATATYPE_ENUM8, RW, (void *)&zclApp_Config.LedMode}},
 };
 
 uint8 CONST zclApp_AttrsFirstEPCount = (sizeof(zclApp_AttrsFirstEP) / sizeof(zclApp_AttrsFirstEP[0]));
@@ -206,3 +204,4 @@ void zclApp_ResetAttributesToDefaultValues(void) {
     zclApp_Config.TimeHigh =      DEFAULT_TimeHigh;
     zclApp_Config.LedMode =       DEFAULT_LedMode;
 }
+

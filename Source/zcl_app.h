@@ -14,12 +14,16 @@ extern "C" {
 /*********************************************************************
  * CONSTANTS
  */
+  
+#define	DAY      86400UL  // 24 hours * 60 minutes * 60 seconds
+
 #define APP_REPORT_DELAY ((uint32)60 * (uint32)1000) // 1 minute
 
 // Application Events
 #define APP_REPORT_EVT          0x0001
-#define APP_SAVE_ATTRS_EVT      0x0002
-#define APP_READ_SENSORS_EVT    0x0004
+#define APP_READ_SENSORS_EVT    0x0002
+#define APP_SAVE_ATTRS_EVT      0x0004
+
 #define APP_REPORT_CLOCK_EVT    0x0008
 
 // 
@@ -46,7 +50,7 @@ extern "C" {
 #define ILLUMINANCE_LVL ZCL_CLUSTER_ID_MS_ILLUMINANCE_LEVEL_SENSING_CONFIG
 #define GEN_TIME        ZCL_CLUSTER_ID_GEN_TIME
 
-#define ATTRID_LED_TYPE 0xF004
+#define ATTRID_LED_MODE 0xF004
   
 #define ZCL_UINT8       ZCL_DATATYPE_UINT8
 #define ZCL_UINT16      ZCL_DATATYPE_UINT16
