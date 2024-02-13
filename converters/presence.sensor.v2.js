@@ -18,29 +18,6 @@ const bind = async (endpoint, target, clusters) => {
     }
 };
 
-/*const withEpPreffix = (converter) => ({
-    ...converter,
-    convert: (model, msg, publish, options, meta) => {
-        const epID = msg.endpoint.ID;
-        const converterResults = converter.convert(model, msg, publish, options, meta) || {};
-        return Object.keys(converterResults)
-            .reduce((result, key) => {
-                result[`${key}_${epID}`] = converterResults[key];
-                return result;
-            }, {});
-    },
-});
-
-const postfixWithEndpointName = (name, msg, definition) => {
-    if (definition.meta && definition.meta.multiEndpoint) {
-        const endpointName = definition.hasOwnProperty('endpoint') ?
-            getKey(definition.endpoint(msg.device), msg.endpoint.ID) : msg.endpoint.ID;
-        return `${name}_${endpointName}`;
-    } else {
-        return name;
-    }
-};
-*/
 const time_to_str = (time) => {
     const date = new Date(null);
     date.setSeconds(time); 
@@ -199,7 +176,7 @@ const device = {
 	vendor: 'Bacchus',
     description: 'Bacchus presence sensor with illuminance',
 	supports: 'on/off, occupancy, illuminance', 
-	fromZigbee: [	fz.on_off_force_multiendpoint, 
+	fromZigbee: [	fz.on_off, 
 					fz.occupancy, 
 					fz.illuminance,
                     fz_local.illuminance_config,
@@ -207,7 +184,7 @@ const device = {
                     fz_local.local_time,
                     fz_local.led_config,
     ],
-	toZigbee: [tz.on_off, //_force_multiendpoint, _force_multiendpoint,
+	toZigbee: [tz.on_off,
                tz_local.illuminance_config,
                tz_local.time_config,
                tz_local.local_time,
@@ -217,32 +194,26 @@ const device = {
 		multiEndpoint: true,
 	},
 	configure: async (device, coordinatorEndpoint) => {
-		const firstEndpoint = device.getEndpoint(1);
+		const firstEndpoint =  device.getEndpoint(1);
 		const secondEndpoint = device.getEndpoint(2);
-		await bind(firstEndpoint, coordinatorEndpoint, [
-			'msOccupancySensing',
-			'msIlluminanceMeasurement',
-		]);
-	const msIlluminanceBindPayload = [{
-		attribute: 'measuredValue',
-		minimumReportInterval: 0,
-		maximumReportInterval: 3600,
-		reportableChange: 0,
-	}];
-	const msOccupancySensingBindPayload = [{
-		attribute: 'occupancy',
-		minimumReportInterval: 0,
-		maximumReportInterval: 3600,
-		reportableChange: 0,
-	}];
-        await reporting.bind(firstEndpoint, coordinatorEndpoint, ['genBasic', 'genIdentify', 'genOnOff', 'genTime',  'msOccupancySensing', 'msIlluminanceMeasurement']);
-        await reporting.onOff(firstEndpoint);
-		await firstEndpoint.configureReporting('msIlluminanceMeasurement', msIlluminanceBindPayload);
-		await firstEndpoint.configureReporting('msOccupancySensing', msOccupancySensingBindPayload);
+		const thirdEndpoint =  device.getEndpoint(3);
 
-        await reporting.bind(secondEndpoint, coordinatorEndpoint, ['genBasic', 'genIdentify', 'genOnOff']);
+        const overrides = { min: 0, max: 3600, change: 0 };
+
+        await reporting.bind(firstEndpoint, coordinatorEndpoint, ['genOnOff', /*'genTime', */ 'msOccupancySensing', 'msIlluminanceMeasurement']);
+        await reporting.onOff(firstEndpoint, overrides);
+		await reporting.illuminance(firstEndpoint, overrides);
+		await reporting.occupancy(firstEndpoint, overrides);
+
+        await reporting.bind(secondEndpoint, coordinatorEndpoint, ['genOnOff']);
         await reporting.onOff(secondEndpoint);
-	},
+
+        await reporting.bind(thirdEndpoint, coordinatorEndpoint, ['genOnOff']);
+        await reporting.onOff(thirdEndpoint);
+
+        await firstEndpoint.write('genTime', {localTime: Math.round(((new Date()).getTime() - (new Date().setHours(0, 0, 0))) / 1000)});
+        await firstEndpoint.read('genTime', [0x0007]);
+        },
 	
 	exposes: [
 			e.switch().withEndpoint('l1'),
