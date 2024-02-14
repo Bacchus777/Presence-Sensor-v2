@@ -363,11 +363,17 @@ static void zclApp_ReadIlluminance(void) {
 
 static bool zclApp_in_time(void){
 
-  if (zclApp_Config.TimeLow <=  zclApp_Config.TimeHigh) {
-    return ((osal_getClock() >= zclApp_Config.TimeLow) & (osal_getClock() <= zclApp_Config.TimeHigh));
-  } 
+  if (zclApp_Config.TimeLow == zclApp_Config.TimeHigh){
+    return TRUE;
+  }
   else {
-    return ((osal_getClock() < zclApp_Config.TimeLow) ^ (osal_getClock() > zclApp_Config.TimeHigh));
+
+    if (zclApp_Config.TimeLow <  zclApp_Config.TimeHigh) {
+      return ((osal_getClock() >= zclApp_Config.TimeLow) & (osal_getClock() <= zclApp_Config.TimeHigh));
+    } 
+    else {
+      return ((osal_getClock() < zclApp_Config.TimeLow) ^ (osal_getClock() > zclApp_Config.TimeHigh));
+    }
   }
 }
 
@@ -391,8 +397,11 @@ static void zclApp_SetOutput(void) {
 
   if (zclApp_Output == 1)
     zclGeneral_SendOnOff_CmdOn(zclApp_SecondEP.EndPoint, &inderect_DstAddr, TRUE, bdb_getZCLFrameCounter());
-  else
-    zclGeneral_SendOnOff_CmdOff(zclApp_SecondEP.EndPoint, &inderect_DstAddr, TRUE, bdb_getZCLFrameCounter());
+  else{
+    
+    if (!zclApp_Occupied) 
+      zclGeneral_SendOnOff_CmdOff(zclApp_SecondEP.EndPoint, &inderect_DstAddr, TRUE, bdb_getZCLFrameCounter());
+  }
 }
 
 static void zclApp_SetLed(void) {
@@ -415,8 +424,13 @@ static void zclApp_SetLed(void) {
 
   if (zclApp_Config.LedEnabled)
     zclGeneral_SendOnOff_CmdOn(zclApp_ThirdEP.EndPoint, &inderect_DstAddr, TRUE, bdb_getZCLFrameCounter());
-  else
+  else {
     zclGeneral_SendOnOff_CmdOff(zclApp_ThirdEP.EndPoint, &inderect_DstAddr, TRUE, bdb_getZCLFrameCounter());
+
+    if (!in_time & !zclApp_Occupied) 
+      zclGeneral_SendOnOff_CmdOff(zclApp_SecondEP.EndPoint, &inderect_DstAddr, TRUE, bdb_getZCLFrameCounter());
+  }
+    
 }
 
 

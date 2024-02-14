@@ -214,7 +214,14 @@ const device = {
         await firstEndpoint.write('genTime', {localTime: Math.round(((new Date()).getTime() - (new Date().setHours(0, 0, 0))) / 1000)});
         await firstEndpoint.read('genTime', [0x0007]);
         },
-	
+
+    onEvent: async (type, data, device) => {
+        if (type === 'deviceAnnounce') {
+            const firstEndpoint =  device.getEndpoint(1);
+            await firstEndpoint.write('genTime', {localTime: Math.round(((new Date()).getTime() - (new Date().setHours(0, 0, 0))) / 1000)});
+        }
+        },
+    
 	exposes: [
 			e.switch().withEndpoint('l1'),
 			e.occupancy(), 
