@@ -23,8 +23,10 @@ extern "C" {
 #define APP_REPORT_EVT          0x0001
 #define APP_READ_SENSORS_EVT    0x0002
 #define APP_SAVE_ATTRS_EVT      0x0004
+#define APP_INIT_VALUES_EVT     0x0008
 
-#define APP_REPORT_CLOCK_EVT    0x0008
+#define REQ_TIME_INTERVAL ((uint32) 1800000)
+#define APP_REQ_TIME_EVT  0x0100  
 
 // 
 #define FIRST_ENDPOINT            1
@@ -75,7 +77,6 @@ typedef enum {
 
 typedef struct {
     bool      SensorEnabled;
-    bool      LedEnabled;
     uint16    Threshold;
     uint32    TimeLow;
     uint32    TimeHigh;
@@ -107,6 +108,7 @@ extern bool    zclApp_Occupied;
 extern uint16  zclApp_IlluminanceSensor_MeasuredValue;
 
 extern bool    zclApp_Output; 
+extern bool    zclApp_LedEnabled; 
 
 extern application_config_t zclApp_Config;
 
