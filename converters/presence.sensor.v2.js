@@ -18,13 +18,6 @@ const bind = async (endpoint, target, clusters) => {
     }
 };
 
-const time_to_str = (time) => {
-    const date = new Date(null);
-    date.setSeconds(time); 
-    result = date.toISOString().slice(11, 19);		  
-    return result;
-};
-
 const time_to_str_min = (time) => {
     const date = new Date(null);
     date.setSeconds(time); 
@@ -68,7 +61,7 @@ const fz_local = {
         type: ['attributeReport', 'readResponse'],
         convert: (model, msg, publish, options, meta) => {
             if (msg.data.hasOwnProperty('localTime')) {
-                result = time_to_str(msg.data.localTime);
+                result = time_to_str_min(msg.data.localTime);
             }
             return {local_time: result};
         },
@@ -136,7 +129,7 @@ const tz_local = {
             const firstEndpoint = meta.device.getEndpoint(1);
 			const time = Math.round(((new Date()).getTime() - (new Date().setHours(0, 0, 0))) / 1000);
             await firstEndpoint.write('genTime', {localTime: time});
-            return {state: {local_time: time_to_str(time)}};
+            return {state: {local_time: time_to_str_min(time)}};
         },
         convertGet: async (entity, key, meta) => {
             const firstEndpoint = meta.device.getEndpoint(1);
@@ -163,9 +156,10 @@ const tz_local = {
             };
         },
         convertGet: async (entity, key, meta) => {
-            const payloads = {led_mode: ['genOnOff', 0xF004],
-            };
-            await entity.read(payloads[key][0], [payloads[key][1]]);
+            const thirdEndpoint = meta.device.getEndpoint(3);
+//            const payloads = {led_mode: ['genOnOff', 0xF004],
+//await thirdEndpoint.read(payloads[key][0], [payloads[key][1]]);
+            await thirdEndpoint.read('genOnOff', [0xF004]);
         },
     },
 };
@@ -200,7 +194,7 @@ const device = {
 
         const overrides = { min: 0, max: 3600, change: 0 };
 
-        await reporting.bind(firstEndpoint, coordinatorEndpoint, ['genOnOff', /*'genTime', */ 'msOccupancySensing', 'msIlluminanceMeasurement']);
+        await reporting.bind(firstEndpoint, coordinatorEndpoint, ['genOnOff', 'genTime', 'msOccupancySensing', 'msIlluminanceMeasurement']);
         await reporting.onOff(firstEndpoint, overrides);
 		await reporting.illuminance(firstEndpoint, overrides);
 		await reporting.occupancy(firstEndpoint, overrides);
@@ -211,29 +205,19 @@ const device = {
         await reporting.bind(thirdEndpoint, coordinatorEndpoint, ['genOnOff']);
         await reporting.onOff(thirdEndpoint);
 
-        await firstEndpoint.write('genTime', {localTime: Math.round(((new Date()).getTime() - (new Date().setHours(0, 0, 0))) / 1000)});
-        await firstEndpoint.read('genTime', [0x0007]);
         },
 
-    onEvent: async (type, data, device) => {
-        if (type === 'deviceAnnounce') {
-            const firstEndpoint =  device.getEndpoint(1);
-            await firstEndpoint.write('genTime', {localTime: Math.round(((new Date()).getTime() - (new Date().setHours(0, 0, 0))) / 1000)});
-        }
-        },
-    
 	exposes: [
 			e.switch().withEndpoint('l1'),
 			e.occupancy(), 
 			e.illuminance(), 
 			e.illuminance_lux(),
-			e.numeric('illuminance_threshold', ACCESS_STATE | ACCESS_WRITE | ACCESS_READ).withValueMin(0).withValueMax(10000).withDescription('Minimum illuminance for binding oputput'),
-            exposes.enum('local_time', ACCESS_STATE | ACCESS_WRITE, ['set']).withDescription('Set date and time'),
-            e.text('local_time', ACCESS_STATE | ACCESS_READ).withDescription('Current time'),
-			e.text('min_time', ACCESS_STATE | ACCESS_WRITE | ACCESS_READ).withDescription('Minimum time for binding oputput'),
-			e.text('max_time', ACCESS_STATE | ACCESS_WRITE | ACCESS_READ).withDescription('Maximum time for binding oputput'),
+			e.numeric('illuminance_threshold', ACCESS_STATE | ACCESS_WRITE | ACCESS_READ).withValueMin(0).withValueMax(10000).withDescription('Минимальная освещенность срабатывания'),
+            e.text('local_time', ACCESS_STATE | ACCESS_READ).withDescription('Текущее время'),
+			e.text('min_time', ACCESS_STATE | ACCESS_WRITE | ACCESS_READ).withDescription('Начало дня'),
+			e.text('max_time', ACCESS_STATE | ACCESS_WRITE | ACCESS_READ).withDescription('Конец дня'),
             e.switch().setAccess('state', ACCESS_STATE | ACCESS_READ).withEndpoint('l2'),
-			e.switch().withEndpoint('l3'),
+			e.switch().setAccess('state', ACCESS_STATE | ACCESS_READ).withEndpoint('l3'),
             e.enum('led_mode', ea.ALL, ['Always', 'Never', 'Night']).withDescription('Режим работы светодиода'),
 			],
 	endpoint: (device) => {
