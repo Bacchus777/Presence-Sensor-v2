@@ -157,8 +157,6 @@ const tz_local = {
         },
         convertGet: async (entity, key, meta) => {
             const thirdEndpoint = meta.device.getEndpoint(3);
-//            const payloads = {led_mode: ['genOnOff', 0xF004],
-//await thirdEndpoint.read(payloads[key][0], [payloads[key][1]]);
             await thirdEndpoint.read('genOnOff', [0xF004]);
         },
     },
