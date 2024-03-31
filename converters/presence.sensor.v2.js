@@ -210,7 +210,7 @@ const device = {
 			e.occupancy(), 
 			e.illuminance(), 
 			e.illuminance_lux(),
-			e.numeric('illuminance_threshold', ACCESS_STATE | ACCESS_WRITE | ACCESS_READ).withValueMin(0).withValueMax(10000).withDescription('Минимальная освещенность срабатывания'),
+			e.numeric('illuminance_threshold', ACCESS_STATE | ACCESS_WRITE | ACCESS_READ).withValueMin(0).withValueMax(10000).withDescription('Минимальная освещенность срабатывания').withEndpoint('l1'),
             e.text('local_time', ACCESS_STATE | ACCESS_READ).withDescription('Текущее время'),
 			e.text('min_time', ACCESS_STATE | ACCESS_WRITE | ACCESS_READ).withDescription('Начало дня'),
 			e.text('max_time', ACCESS_STATE | ACCESS_WRITE | ACCESS_READ).withDescription('Конец дня'),

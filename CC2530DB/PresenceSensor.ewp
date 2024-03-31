@@ -462,7 +462,7 @@
                 <option>
                     <name>Compiler Extra Options Edit</name>
                     <state>-f $PROJ_DIR$\..\..\..\Tools\CC2530DB\f8wRouter.cfg</state>
-                    <state>-f $PROJ_DIR$\..\..\..\Tools\CC2530DB\f8wConfig.cfg</state>
+                    <state>-f $PROJ_DIR$\..\zstack-lib\f8wConfig.cfg</state>
                     <state>-f $PROJ_DIR$\..\..\..\Tools\CC2530DB\f8wZCL.cfg</state>
                 </option>
                 <option>
@@ -2744,7 +2744,7 @@
                 <option>
                     <name>Compiler Extra Options Edit</name>
                     <state>-f $PROJ_DIR$\..\..\..\Tools\CC2530DB\f8wRouter.cfg</state>
-                    <state>-f $PROJ_DIR$\..\..\..\Tools\CC2530DB\f8wConfig.cfg</state>
+                    <state>-f $PROJ_DIR$\..\zstack-lib\f8wConfig.cfg</state>
                     <state>-f $PROJ_DIR$\..\..\..\Tools\CC2530DB\f8wZCL.cfg</state>
                 </option>
                 <option>
@@ -5031,7 +5031,7 @@
                 <option>
                     <name>Compiler Extra Options Edit</name>
                     <state>-f $PROJ_DIR$\..\..\..\Tools\CC2530DB\f8wRouter.cfg</state>
-                    <state>-f $PROJ_DIR$\..\..\..\Tools\CC2530DB\f8wConfig.cfg</state>
+                    <state>-f $PROJ_DIR$\..\zstack-lib\f8wConfig.cfg</state>
                     <state>-f $PROJ_DIR$\..\..\..\Tools\CC2530DB\f8wZCL.cfg</state>
                 </option>
                 <option>
@@ -7318,7 +7318,7 @@
                 <option>
                     <name>Compiler Extra Options Edit</name>
                     <state>-f $PROJ_DIR$\..\..\..\Tools\CC2530DB\f8wRouter.cfg</state>
-                    <state>-f $PROJ_DIR$\..\..\..\Tools\CC2530DB\f8wConfig.cfg</state>
+                    <state>-f $PROJ_DIR$\..\zstack-lib\f8wConfig.cfg</state>
                     <state>-f $PROJ_DIR$\..\..\..\Tools\CC2530DB\f8wZCL.cfg</state>
                 </option>
                 <option>
@@ -8055,7 +8055,7 @@
             <name>$PROJ_DIR$\..\..\..\..\..\Components\stack\bdb\bdb_touchlink.c</name>
         </file>
         <file>
-            <name>$PROJ_DIR$\..\..\..\..\..\Components\stack\bdb\bdb_touchLink.h</name>
+            <name>$PROJ_DIR$\..\..\..\..\..\Components\stack\bdb\bdb_touchlink.h</name>
         </file>
         <file>
             <name>$PROJ_DIR$\..\..\..\..\..\Components\stack\bdb\bdb_touchlink_target.c</name>
