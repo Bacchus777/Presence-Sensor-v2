@@ -47,10 +47,16 @@
 #if defined(HAL_BOARD_TARGET)
     #define HAL_KEY_P0_INPUT_PINS BV(1)
     #define HAL_KEY_P0_INPUT_PINS_EDGE HAL_KEY_RISING_EDGE
+    #define HLK_PORT  HAL_UART_PORT_0
+    #define HAL_UART_DMA 1
+    #define HAL_UART_ISR 2
     #define INT_HEAP_LEN (2256 - 0xE)
 #elif defined(HAL_BOARD_CHDTECH_DEV)
     #define HAL_KEY_P0_INPUT_PINS BV(1)
     #define HAL_KEY_P0_INPUT_PINS_EDGE HAL_KEY_FALLING_EDGE
+    #define HAL_KEY_P2_INPUT_PINS BV(0)
+    #define HAL_KEY_P2_INPUT_PINS_EDGE HAL_KEY_FALLING_EDGE
+    #define HLK_PORT  HAL_UART_PORT_1
     #define HAL_UART_DMA 1
     #define HAL_UART_ISR 2
     #define DO_DEBUG_UART
@@ -76,7 +82,7 @@
 #endif
 
 #ifndef FACTORY_RESET_BY_LONG_PRESS
-  #define FACTORY_RESET_BY_LONG_PRESS FALSE
+  #define FACTORY_RESET_BY_LONG_PRESS TRUE
 #endif
 
 

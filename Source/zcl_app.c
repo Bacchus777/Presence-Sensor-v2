@@ -86,6 +86,10 @@ static void zclApp_SetOutput(void);
 static void zclApp_SetLed(void);
 static bool zclApp_in_time(void);
 
+static void zclApp_InitHLKUart(void);
+static void zclApp_ReadDistance(void);
+static void SerialApp_CallBack(uint8 port, uint8 event);   // Receive data will trigger
+
 static void zclApp_BasicResetCB(void);
 static void zclApp_RestoreAttributesFromNV(void);
 static void zclApp_SaveAttributesToNV(void);
@@ -114,8 +118,10 @@ void zclApp_ReportOnOff( void );
 void zclApp_ReportOutput( void );
 // Обновление времени
 void zclApp_UpdateClock(void);
-// Обновление времени
+// Инициализация значений
 void zclApp_InitValues(void);
+// измерение дистанции
+static void zclApp_ReadDistance(void);
 
 
 /*********************************************************************
@@ -168,8 +174,66 @@ void zclApp_Init(byte task_id) {
   
   LREP("START APP_REPORT_CLOCK_EVT\r\n");
   
+  zclApp_InitHLKUart();
 }
 
+#define RESPONSE_LENGHT 64
+
+void SerialApp_CallBack(uint8 port, uint8 event)   // Receive data will trigger
+{
+  uint8 response[RESPONSE_LENGHT] = {0x00};
+  HalUARTRead(HLK_PORT, (uint8 *)&response, sizeof(response) / sizeof(response[0]));
+
+  if ((response[0] == 0xF4) & (response[1] == 0xF3) & (response[2] == 0xF2) & (response[3] == 0xF1) &
+      (response[19] == 0xF8) & (response[20] == 0xF7) & (response[21] == 0xF6) & (response[22] == 0xF5)
+     ) {
+// установка конфигурационного  режима
+    LREPMaster("CALLBACK UART \r\n");
+    for (int i = 0; i <= (23 - 1); i++) 
+    {
+      LREP("0x%X ", response[i]);
+    }
+    LREP("\r\n");
+
+    zclApp_M_Distance = response[11] >> 8 | response[10];
+    zclApp_S_Distance = response[13] >> 8 | response[12];
+
+    LREP("Moving %d, stationary %d ", zclApp_M_Distance, zclApp_S_Distance);
+    
+    bdb_RepChangedAttrValue(zclApp_FirstEP.EndPoint, OCCUPANCY , ATTRID_MS_OCCUPANCY_SENSING_CONFIG_OCCUPANCY);
+    
+    uint8 stopFlood[14]  = {0xFD, 0xFC, 0xFB, 0xFA, 0x04, 0x00, 0xFF, 0x00, 0x01, 0x00, 0x04, 0x03, 0x02, 0x01};
+    HalUARTWrite(HLK_PORT, stopFlood, sizeof(stopFlood) / sizeof(stopFlood[0])); 
+  }
+
+}
+
+static void zclApp_InitHLKUart(void) {
+  halUARTCfg_t halUARTConfig;
+  halUARTConfig.configured = TRUE;
+  halUARTConfig.baudRate = HAL_UART_BR_115200;
+  halUARTConfig.flowControl = FALSE;
+  halUARTConfig.flowControlThreshold = 64; // this parameter indicates number of bytes left before Rx Buffer
+                                           // reaches maxRxBufSize
+  halUARTConfig.idleTimeout = 10;          // this parameter indicates rx timeout period in millisecond
+  halUARTConfig.rx.maxBufSize = 128;
+  halUARTConfig.tx.maxBufSize = 128;
+  halUARTConfig.intEnable = TRUE;
+  halUARTConfig.callBackFunc = SerialApp_CallBack;
+  HalUARTInit();
+  if (HalUARTOpen(HLK_PORT, &halUARTConfig) == HAL_UART_SUCCESS) {
+    LREPMaster("Initialized HLK UART \r\n");
+  }
+}
+
+static void zclApp_ReadDistance(void) {
+  LREPMaster("Read distance \r\n");
+
+// отмена конфигурационного режима
+  uint8 startFlood[12]  = {0xFD, 0xFC, 0xFB, 0xFA, 0x02, 0x00, 0xFE, 0x00, 0x04, 0x03, 0x02, 0x01};
+  HalUARTWrite(HLK_PORT, startFlood, sizeof(startFlood) / sizeof(startFlood[0])); 
+
+}
 
 uint16 zclApp_event_loop(uint8 task_id, uint16 events) {
     LREP("events 0x%x \r\n", events);
@@ -225,6 +289,11 @@ uint16 zclApp_event_loop(uint8 task_id, uint16 events) {
       zclApp_InitValues();      
       return (events ^ APP_INIT_VALUES_EVT);
     }
+    if (events & APP_GET_DISTANCE_EVT) {
+      LREPMaster("APP_GET_DISTANCE_EVT\r\n");
+      zclApp_ReadDistance();
+      return (events ^ APP_GET_DISTANCE_EVT);
+    }
 
     return 0;
 }
@@ -232,13 +301,23 @@ uint16 zclApp_event_loop(uint8 task_id, uint16 events) {
 // обработка выхода с датчика
 static void zclApp_HandleKeys(byte portAndAction, byte keyCode) {
   LREP("zclApp_HandleKeys portAndAction=0x%X keyCode=0x%X\r\n", portAndAction, keyCode);
-  if (portAndAction & HAL_KEY_PRESS) {
-    updateOccupancy(TRUE);
-    osal_start_timerEx(zclApp_TaskID, APP_REPORT_EVT, 200);
-  }
-  if (portAndAction & HAL_KEY_RELEASE) {
-    updateOccupancy(FALSE);
-    osal_start_timerEx(zclApp_TaskID, APP_REPORT_EVT, 200);
+
+  zclFactoryResetter_HandleKeys(portAndAction, keyCode);
+  zclCommissioning_HandleKeys(portAndAction, keyCode);
+  if (HAL_KEY_PORT0 & portAndAction) {
+    if (portAndAction & HAL_KEY_PRESS) {
+    LREPMaster("read distance\r\n");
+      zclApp_ReadDistance();
+      updateOccupancy(TRUE);
+      osal_start_timerEx(zclApp_TaskID, APP_REPORT_EVT, 200);
+      osal_start_reload_timer(zclApp_TaskID, APP_GET_DISTANCE_EVT, zclApp_Config.MeasurementPeriod * 1000);
+    }
+    if (portAndAction & HAL_KEY_RELEASE) {
+      updateOccupancy(FALSE);
+      osal_start_timerEx(zclApp_TaskID, APP_REPORT_EVT, 200);
+      osal_stop_timerEx(zclApp_TaskID, APP_GET_DISTANCE_EVT);
+      osal_clear_event(zclApp_TaskID, APP_GET_DISTANCE_EVT);
+    }
   }
 }
 

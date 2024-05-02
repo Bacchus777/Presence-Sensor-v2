@@ -7,6 +7,7 @@ const fz = zigbeeHerdsmanConverters.fromZigbeeConverters || zigbeeHerdsmanConver
 const tz = zigbeeHerdsmanConverters.toZigbeeConverters || zigbeeHerdsmanConverters.toZigbee;
 const reporting = require('zigbee-herdsman-converters/lib/reporting');
 const utils = require('zigbee-herdsman-converters/lib/utils');
+
 const ZCL_DATATYPE_UINT16 = 0x21;
 const ZCL_DATATYPE_UINT32 = 0x23;
 
@@ -60,10 +61,11 @@ const fz_local = {
         cluster: 'genTime',
         type: ['attributeReport', 'readResponse'],
         convert: (model, msg, publish, options, meta) => {
+            const result = {};
             if (msg.data.hasOwnProperty('localTime')) {
-                result = time_to_str_min(msg.data.localTime);
+                result.local_time = time_to_str_min(msg.data.localTime);
             }
-            return {local_time: result};
+            return result;
         },
     },
     led_config: {
@@ -74,6 +76,23 @@ const fz_local = {
                 result = ['Always', 'Never', 'Night'][msg.data[0xF004]];
             }
             return {led_mode: result};
+        },
+    },
+    distance: {
+        cluster: 'msOccupancySensing',
+        type: ['attributeReport', 'readResponse'],
+        convert: (model, msg, publish, options, meta) => {
+            const result = {};
+            if (msg.data.hasOwnProperty(0x23)) {
+                result.movement_distance =  msg.data[0x23];
+            }
+            if (msg.data.hasOwnProperty(0x24)) {
+                result.stationary_distance =  msg.data[0x24];
+            }
+            if (msg.data.hasOwnProperty(0x25)) {
+                result.measurement_period =  msg.data[0x25];
+            }
+            return result;
         },
     },
 };
@@ -160,11 +179,31 @@ const tz_local = {
             await thirdEndpoint.read('genOnOff', [0xF004]);
         },
     },
+    distance: {
+        key: ['measurement_period'],
+        convertSet: async (entity, key, value, meta) => {
+            const firstEndpoint = meta.device.getEndpoint(1);
+            value *= 1;
+            const payloads = {
+                measurement_period: ['msOccupancySensing', {0x0025: {value, type: ZCL_DATATYPE_UINT16}}],
+            };
+            await firstEndpoint.write(payloads[key][0], payloads[key][1]);
+            return {
+                state: {[key]: value},
+            };
+        },
+        convertGet: async (entity, key, meta) => {
+            const payloads = {
+                measurement_period: ['msOccupancySensing', 0x0025],
+            };
+            await firstEndpoint.read(payloads[key][0], [payloads[key][1]]);
+        },
+    },
 };
 
 const device = {
-	zigbeeModel: ['Presence_Sensor_v2'],
-	model: 'Presence_Sensor_v2',
+	zigbeeModel: ['Presence_Sensor_v2.5'],
+	model: 'Presence_Sensor_v2.5',
 	vendor: 'Bacchus',
     description: 'Bacchus presence sensor with illuminance',
 	supports: 'on/off, occupancy, illuminance', 
@@ -175,12 +214,14 @@ const device = {
                     fz_local.time_config,
                     fz_local.local_time,
                     fz_local.led_config,
+                    fz_local.distance
     ],
 	toZigbee: [tz.on_off,
                tz_local.illuminance_config,
                tz_local.time_config,
                tz_local.local_time,
                tz_local.led_config,
+               tz_local.distance,
             ],
 	meta: {
 		multiEndpoint: true,
@@ -209,14 +250,16 @@ const device = {
 			e.switch().withEndpoint('l1'),
 			e.occupancy(), 
 			e.illuminance(), 
-			e.illuminance_lux(),
-			e.numeric('illuminance_threshold', ACCESS_STATE | ACCESS_WRITE | ACCESS_READ).withValueMin(0).withValueMax(10000).withDescription('Минимальная освещенность срабатывания').withEndpoint('l1'),
+			e.numeric('illuminance_threshold', ACCESS_STATE | ACCESS_WRITE | ACCESS_READ).withValueMin(0).withValueMax(10000).withDescription('Минимальная освещенность срабатывания'),
             e.text('local_time', ACCESS_STATE | ACCESS_READ).withDescription('Текущее время'),
 			e.text('min_time', ACCESS_STATE | ACCESS_WRITE | ACCESS_READ).withDescription('Начало дня'),
 			e.text('max_time', ACCESS_STATE | ACCESS_WRITE | ACCESS_READ).withDescription('Конец дня'),
             e.switch().setAccess('state', ACCESS_STATE | ACCESS_READ).withEndpoint('l2'),
 			e.switch().setAccess('state', ACCESS_STATE | ACCESS_READ).withEndpoint('l3'),
             e.enum('led_mode', ea.ALL, ['Always', 'Never', 'Night']).withDescription('Режим работы светодиода'),
+            e.numeric('movement_distance', ACCESS_STATE).withUnit('cm').withDescription('Movement target distance'),
+            e.numeric('stationary_distance', ACCESS_STATE).withUnit('cm').withDescription('Stationary target distance'),
+			e.numeric('measurement_period', ACCESS_STATE | ACCESS_WRITE | ACCESS_READ).withValueMin(5).withValueMax(60).withDescription('Distance measure period'),
 			],
 	endpoint: (device) => {
 		return {'l1': 1, 'l2': 2, 'l3': 3}
