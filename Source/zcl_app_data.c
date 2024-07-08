@@ -44,11 +44,12 @@ const uint16 zclApp_clusterRevision_all = 0x0002;
 
 bool    zclApp_Occupied = FALSE; 
 uint16  zclApp_IlluminanceSensor_MeasuredValue = 0;
-bool    zclApp_Output = FALSE;
+bool    zclApp_DayOutput = FALSE;
+bool    zclApp_NightOutput = FALSE;
 uint32  zclApp_GenTime_TimeUTC = 0;
-bool    zclApp_LedEnabled = FALSE;
-uint16  zclApp_M_Distance = 0;
-uint16  zclApp_S_Distance = 0;
+bool    zclApp_Led = FALSE;
+uint16  zclApp_Distance = 0;
+TargetType_t  zclApp_TargetType = TARGET_NONE;
 
 // Basic Cluster
 const uint8 zclApp_HWRevision = APP_HWVERSION;
@@ -62,9 +63,9 @@ const uint8 zclApp_PowerSource = POWER_SOURCE_MAINS_1_PHASE;
 
 
 #define DEFAULT_SensorEnabled     TRUE
-#define DEFAULT_Threshold         0
-#define DEFAULT_TimeLow           0
-#define DEFAULT_TimeHigh          0
+#define DEFAULT_Threshold       (uint16)25000
+#define DEFAULT_TimeLow         (uint32)28800
+#define DEFAULT_TimeHigh        (uint32)82800
 #define DEFAULT_LedMode           LED_ALWAYS
 #define DEFAULT_MeasurementPeriod 15
 
@@ -99,8 +100,8 @@ CONST zclAttrRec_t zclApp_AttrsFirstEP[] = {
     {GEN_ON_OFF, {ATTRID_CLUSTER_REVISION, ZCL_INT16, RW, (void *)&zclApp_clusterRevision_all}},
 
     {OCCUPANCY, {ATTRID_MS_OCCUPANCY_SENSING_CONFIG_OCCUPANCY, ZCL_BITMAP8, RR, (void *)&zclApp_Occupied}},
-    {OCCUPANCY, {ATTRID_MS_OCCUPANCY_MOVEMENT_TARGET_DISTANCE, ZCL_UINT16, RR, (void *)&zclApp_M_Distance}},
-    {OCCUPANCY, {ATTRID_MS_OCCUPANCY_STATIONARY_TARGET_DISTANCE, ZCL_UINT16, RR, (void *)&zclApp_S_Distance}},
+    {OCCUPANCY, {ATTRID_MS_OCCUPANCY_TARGET_DISTANCE, ZCL_UINT16, RR, (void *)&zclApp_Distance}},
+    {OCCUPANCY, {ATTRID_MS_OCCUPANCY_TARGET_TYPE, ZCL_DATATYPE_ENUM8, RR, (void *)&zclApp_TargetType}},
     {OCCUPANCY, {ATTRID_MS_DISTANCE_MEASUREMENT_PERIOD, ZCL_UINT16, RW, (void *)&zclApp_Config.MeasurementPeriod}},
     
     {ILLUMINANCE, {ATTRID_MS_ILLUMINANCE_MEASURED_VALUE, ZCL_UINT16, RR, (void *)&zclApp_IlluminanceSensor_MeasuredValue}},
@@ -113,11 +114,11 @@ CONST zclAttrRec_t zclApp_AttrsFirstEP[] = {
 };
 
 CONST zclAttrRec_t zclApp_AttrsSecondEP[] = {
-    {GEN_ON_OFF, {ATTRID_ON_OFF, ZCL_BOOLEAN, RR, (void *)&zclApp_Output}},
+    {GEN_ON_OFF, {ATTRID_ON_OFF, ZCL_BOOLEAN, RR, (void *)&zclApp_DayOutput}},
 };
 
 CONST zclAttrRec_t zclApp_AttrsThirdEP[] = {
-    {GEN_ON_OFF, {ATTRID_ON_OFF, ZCL_BOOLEAN, RWR, (void *)&zclApp_LedEnabled}},
+    {GEN_ON_OFF, {ATTRID_ON_OFF, ZCL_BOOLEAN, RWR, (void *)&zclApp_NightOutput}},
     {GEN_ON_OFF, {ATTRID_LED_MODE, ZCL_DATATYPE_ENUM8, RW, (void *)&zclApp_Config.LedMode}},
 };
 
@@ -132,6 +133,7 @@ const cId_t zclApp_InClusterListFirstEP[] = {
   GEN_ON_OFF,
   OCCUPANCY, 
   ILLUMINANCE,
+  ILLUMINANCE_LVL,
   GEN_TIME
 };
 
@@ -142,6 +144,7 @@ const cId_t zclApp_OutClusterListFirstEP[] = {
   GEN_ON_OFF,
   OCCUPANCY, 
   ILLUMINANCE,
+  ILLUMINANCE_LVL,
   GEN_TIME
 };
 

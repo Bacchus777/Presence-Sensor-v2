@@ -54,8 +54,8 @@ extern "C" {
 #define GEN_TIME        ZCL_CLUSTER_ID_GEN_TIME
 
 #define ATTRID_LED_MODE                                   0xF004
-#define ATTRID_MS_OCCUPANCY_MOVEMENT_TARGET_DISTANCE      0x0023
-#define ATTRID_MS_OCCUPANCY_STATIONARY_TARGET_DISTANCE    0x0024
+#define ATTRID_MS_OCCUPANCY_TARGET_DISTANCE               0x0023
+#define ATTRID_MS_OCCUPANCY_TARGET_TYPE                   0x0024
 #define ATTRID_MS_DISTANCE_MEASUREMENT_PERIOD             0x0025
   
 #define ZCL_UINT8       ZCL_DATATYPE_UINT8
@@ -78,6 +78,13 @@ typedef enum {
     LED_NEVER,  // Светодиод не горит никогда
     LED_NIGHT,  // Светодиод включается при присутствии в ночное время
 } LedMode_t;
+
+typedef enum {
+    TARGET_NONE,        // Нет объекта
+    TARGET_MOVING,      // Объект движется
+    TARGET_STATIONARY,  // Объект неподвижен
+    TARGET_ST_AND_MOV   // Объект движется и неподвижен
+} TargetType_t;
 
 typedef struct {
     bool      SensorEnabled;
@@ -112,11 +119,12 @@ extern const uint8 zclApp_PowerSource;
 extern bool    zclApp_Occupied; 
 extern uint16  zclApp_IlluminanceSensor_MeasuredValue;
 
-extern bool    zclApp_Output; 
-extern bool    zclApp_LedEnabled; 
+extern bool    zclApp_DayOutput; 
+extern bool    zclApp_NightOutput; 
+extern bool    zclApp_Led; 
 
-extern uint16  zclApp_M_Distance;
-extern uint16  zclApp_S_Distance;
+extern uint16  zclApp_Distance;
+extern TargetType_t zclApp_TargetType;
 
 extern application_config_t zclApp_Config;
 

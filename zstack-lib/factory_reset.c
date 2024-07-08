@@ -64,6 +64,8 @@ void zclFactoryResetter_HandleKeys(uint8 portAndAction, uint8 keyCode) {
         bool statTimer = true;
 #if FACTORY_RESET_BY_LONG_PRESS_PORT
         statTimer = FACTORY_RESET_BY_LONG_PRESS_PORT & portAndAction;
+        LREP("FACTORY_RESET_BY_LONG_PRESS_PORT 0X%X\r\n", FACTORY_RESET_BY_LONG_PRESS_PORT);
+        LREP("portAndAction 0X%X\r\n", portAndAction);
 #endif
         LREP("zclFactoryResetter statTimer hold timer %d\r\n", statTimer);
         if (statTimer) {
