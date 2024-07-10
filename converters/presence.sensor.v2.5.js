@@ -257,6 +257,7 @@ const device = {
 			e.switch().withEndpoint('l1'),
 			e.occupancy(), 
 			e.illuminance(), 
+			e.illuminance_lux(), 
 			e.numeric('illuminance_threshold', ACCESS_STATE | ACCESS_WRITE | ACCESS_READ).withValueMin(0).withValueMax(50000).withDescription('Минимальная освещенность срабатывания'),
             e.text('local_time', ACCESS_STATE | ACCESS_READ).withDescription('Current time'),
 			e.text('min_time', ACCESS_STATE | ACCESS_WRITE | ACCESS_READ).withDescription('Day start'),
@@ -265,7 +266,7 @@ const device = {
 			e.switch().setAccess('state', ACCESS_STATE | ACCESS_READ).withEndpoint('l3'),
             e.enum('led_mode', ea.ALL, ['Always', 'Never', 'Night']).withDescription('Led working mode'),
             e.numeric('target_distance', ACCESS_STATE).withUnit('cm').withDescription('Movement target distance'),
-            e.enum('target_type', ea.ALL, ['None', 'Moving', 'Stationary', 'Moving and tationary']).withDescription('Target type'),
+            e.enum('target_type', ea.ALL, ['None', 'Moving', 'Stationary', 'Moving and stationary']).withDescription('Target type'),
             e.numeric('measurement_period', ea.ALL).withUnit('sec').withDescription('Distance mesurment period'),
             
 			],
