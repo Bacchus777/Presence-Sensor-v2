@@ -62,12 +62,12 @@ const uint8 zclApp_ModelId[] = {20, 'P', 'r', 'e', 's', 'e', 'n', 'c', 'e', '_',
 const uint8 zclApp_PowerSource = POWER_SOURCE_MAINS_1_PHASE;
 
 
-#define DEFAULT_SensorEnabled     TRUE
-#define DEFAULT_Threshold       (uint16)25000
-#define DEFAULT_TimeLow         (uint32)28800
-#define DEFAULT_TimeHigh        (uint32)82800
-#define DEFAULT_LedMode           LED_ALWAYS
-#define DEFAULT_MeasurementPeriod 15
+#define DEFAULT_SensorEnabled       TRUE
+#define DEFAULT_Threshold           (uint16)25000
+#define DEFAULT_TimeLow             (uint32)28800
+#define DEFAULT_TimeHigh            (uint32)82800
+#define DEFAULT_LedMode             LED_ALWAYS
+#define DEFAULT_MeasurementPeriod   15
 
 
 application_config_t zclApp_Config = {

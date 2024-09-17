@@ -7,8 +7,8 @@
     #endif
 
     #include "version.h"
-const uint8 zclApp_DateCode[] = { 16, '0', '8', '/', '0', '7', '/', '2', '0', '2', '4', ' ', '1', '3', ':', '3', '8' };
-const char zclApp_DateCodeNT[] = "08/07/2024 13:38";
+const uint8 zclApp_DateCode[] = { 16, '1', '2', '/', '0', '9', '/', '2', '0', '2', '4', ' ', '2', '3', ':', '5', '1' };
+const char zclApp_DateCodeNT[] = "12/09/2024 23:51";
 
     #ifdef __cplusplus
     }

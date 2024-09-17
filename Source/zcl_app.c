@@ -37,6 +37,7 @@
 #include "version.h"
 
 #include <stdint.h>
+#include <string.h>
 /*********************************************************************
  * MACROS
  */
@@ -44,6 +45,15 @@
 /*********************************************************************
  * CONSTANTS
  */
+
+#define RESPONSE_LENGHT     44
+#define HLK_RESPONSE_LENGHT 22
+
+
+uint8 startFlood[12]  = {0xFD, 0xFC, 0xFB, 0xFA, 0x02, 0x00, 0xFE, 0x00, 0x04, 0x03, 0x02, 0x01};
+uint8 stopFlood[14]   = {0xFD, 0xFC, 0xFB, 0xFA, 0x04, 0x00, 0xFF, 0x00, 0x01, 0x00, 0x04, 0x03, 0x02, 0x01};
+uint8 startBits[4]    = {0xF4, 0xF3, 0xF2, 0xF1};
+uint8 endBits[4]      = {0xF8, 0xF7, 0xF6, 0xF5};
 
 /*********************************************************************
  * TYPEDEFS
@@ -78,6 +88,8 @@ static uint8 currentSensorsReadingPhase = 0;
 /*********************************************************************
  * LOCAL FUNCTIONS
  */
+int8 findSubstring(uint8 *array, uint8 arraySize, uint8 *sequence, uint8 sequenceSize, uint8 start);
+
 
 static void zclApp_SetDayOutput(void);
 static void zclApp_ReadSensors(void);
@@ -117,8 +129,6 @@ void zclApp_ReportOnOff( void );
 void zclApp_ReportOutput( void );
 // Обновление времени
 void zclApp_UpdateClock(void);
-// измерение дистанции
-static void zclApp_ReadDistance(void);
 
 
 /*********************************************************************
@@ -167,54 +177,85 @@ void zclApp_Init(byte task_id) {
   LREP("Build %s \r\n", zclApp_DateCodeNT);
   
   osal_start_reload_timer(zclApp_TaskID, APP_REPORT_EVT, APP_REPORT_DELAY);
-  osal_start_reload_timer(zclApp_TaskID, APP_REQ_TIME_EVT, REQ_TIME_INTERVAL);
-  osal_start_reload_timer(zclApp_TaskID, APP_INIT_VALUES_EVT, 90000);
+  osal_start_reload_timer(zclApp_TaskID, APP_REQ_TIME_EVT, INIT_REQ_TIME_INTERVAL);
   
   LREP("START APP_REPORT_CLOCK_EVT\r\n");
   
   zclApp_InitHLKUart();
 }
 
-#define RESPONSE_LENGHT 64
+int8 findSubstring(uint8 *array, uint8 arraySize, uint8 *sequence, uint8 sequenceSize, uint8 start) 
+{
+  if (start > (arraySize - sequenceSize)) 
+    return -1;
+  
+  bool match = true;
+  for (int i = start; i < (arraySize - sequenceSize); i++) 
+  {
+    match = true;
+    for (uint8 j = 0; j < sequenceSize; j++){
+      match = match & (array[i + j] == sequence[j]);
+    }
+      
+
+    if (match)
+    {
+      LREP("match %d \r\n", i);
+      return i;
+    }
+
+  }
+
+  LREPMaster("not match \r\n");
+  return -1;
+}
 
 void SerialApp_CallBack(uint8 port, uint8 event)   // Receive data will trigger
 {
   uint8 response[RESPONSE_LENGHT] = {0x00};
   HalUARTRead(HLK_PORT, (uint8 *)&response, sizeof(response) / sizeof(response[0]));
 
-  if ((response[0] == 0xF4) & (response[1] == 0xF3) & (response[2] == 0xF2) & (response[3] == 0xF1) &
-      (response[19] == 0xF8) & (response[20] == 0xF7) & (response[21] == 0xF6) & (response[22] == 0xF5)
-     ) {
-// установка конфигурационного  режима
     LREPMaster("CALLBACK UART \r\n");
-    for (int i = 0; i <= (23 - 1); i++) 
+    for (int i = 0; i <= (RESPONSE_LENGHT - 1); i++) 
     {
       LREP("0x%X ", response[i]);
     }
     LREP("\r\n");
+  
+  int8 startBit = findSubstring(response, RESPONSE_LENGHT, startBits, 4, 0);
 
-    zclApp_Distance = (uint16)(response[16] * 0x100) + (uint16)response[15];
-    switch (response[8]) {
-    case 0x00: 
-      zclApp_TargetType = TARGET_NONE;
-      break;
-    case 0x01: 
-      zclApp_TargetType = TARGET_MOVING;
-      break;
-    case 0x02: 
-      zclApp_TargetType = TARGET_STATIONARY;
-      break;
-    case 0x03: 
-      zclApp_TargetType = TARGET_ST_AND_MOV;
-      break;
+  LREP("startBit = %d\r\n", startBit);
+  
+  if (startBit >= 0) {
+
+    
+    if (findSubstring(response, RESPONSE_LENGHT, endBits, 4, startBit) > 0) {
+  // установка конфигурационного  режима
+
+      zclApp_Distance = (uint16)(response[16 + startBit] * 0x100) + (uint16)response[15 + startBit];
+
+      LREP("zclApp_Distance = %d\r\n", zclApp_Distance);
+      
+      switch (response[8 + startBit]) {
+      case 0x00: 
+        zclApp_TargetType = TARGET_NONE;
+        break;
+      case 0x01: 
+        zclApp_TargetType = TARGET_MOVING;
+        break;
+      case 0x02: 
+        zclApp_TargetType = TARGET_STATIONARY;
+        break;
+      case 0x03: 
+        zclApp_TargetType = TARGET_ST_AND_MOV;
+        break;
+      }
+          
+      updateOccupancy(TRUE);
+
+      HalUARTWrite(HLK_PORT, stopFlood, sizeof(stopFlood) / sizeof(stopFlood[0])); 
     }
-        
-    updateOccupancy(TRUE);
-
-    uint8 stopFlood[14]  = {0xFD, 0xFC, 0xFB, 0xFA, 0x04, 0x00, 0xFF, 0x00, 0x01, 0x00, 0x04, 0x03, 0x02, 0x01};
-    HalUARTWrite(HLK_PORT, stopFlood, sizeof(stopFlood) / sizeof(stopFlood[0])); 
   }
-
 }
 
 static void zclApp_InitHLKUart(void) {
@@ -239,7 +280,6 @@ static void zclApp_ReadDistance(void) {
   LREPMaster("Read distance \r\n");
 
 // отмена конфигурационного режима
-  uint8 startFlood[12]  = {0xFD, 0xFC, 0xFB, 0xFA, 0x02, 0x00, 0xFE, 0x00, 0x04, 0x03, 0x02, 0x01};
   HalUARTWrite(HLK_PORT, startFlood, sizeof(startFlood) / sizeof(startFlood[0])); 
 
 }
@@ -272,28 +312,28 @@ uint16 zclApp_event_loop(uint8 task_id, uint16 events) {
         // return unprocessed events
         return (events ^ SYS_EVENT_MSG);
     }
-    if (events == APP_REPORT_EVT) {
+    if (events & APP_REPORT_EVT) {
         LREPMaster("APP_REPORT_EVT\r\n");
         zclApp_Report();
         return (events ^ APP_REPORT_EVT);
     }
 
-    if (events == APP_SAVE_ATTRS_EVT) {
+    if (events & APP_SAVE_ATTRS_EVT) {
         LREPMaster("APP_SAVE_ATTRS_EVT\r\n");
         zclApp_SaveAttributesToNV();
         return (events ^ APP_SAVE_ATTRS_EVT);
     }
-    if (events == APP_READ_SENSORS_EVT) {
+    if (events & APP_READ_SENSORS_EVT) {
         LREPMaster("APP_READ_SENSORS_EVT\r\n");
         zclApp_ReadSensors();
         return (events ^ APP_READ_SENSORS_EVT);
     }
-    if (events == APP_REQ_TIME_EVT) {
+    if (events & APP_REQ_TIME_EVT) {
       LREPMaster("APP_REQ_TIME_EVT\r\n");
       zclApp_reqLocalTime();      
       return (events ^ APP_REQ_TIME_EVT);
     }
-    if (events == APP_GET_DISTANCE_EVT) {
+    if (events & APP_GET_DISTANCE_EVT) {
       LREPMaster("APP_GET_DISTANCE_EVT\r\n");
       zclApp_ReadDistance();
       return (events ^ APP_GET_DISTANCE_EVT);
@@ -320,6 +360,8 @@ static void zclApp_HandleKeys(byte portAndAction, byte keyCode) {
     LREPMaster("OCCUPIED\r\n");
 
     if (portAndAction & HAL_KEY_PRESS) {
+      
+      
       LREPMaster("read distance\r\n");
       updateOccupancy(TRUE);
       zclApp_ReadDistance();
@@ -601,6 +643,14 @@ static void zclApp_SaveAttributesToNV(void) {
     zclApp_GenTime_old = zclApp_GenTime_TimeUTC;    
     osal_setClock(zclApp_GenTime_TimeUTC + 2);    
   }
+
+  if ((zclApp_Config.MeasurementPeriod > 0) & zclApp_Occupied) 
+    osal_start_reload_timer(zclApp_TaskID, APP_GET_DISTANCE_EVT, zclApp_Config.MeasurementPeriod * 1000);
+
+  if (zclApp_Config.MeasurementPeriod == 0){
+    osal_stop_timerEx(zclApp_TaskID, APP_GET_DISTANCE_EVT);
+    osal_clear_event(zclApp_TaskID, APP_GET_DISTANCE_EVT);
+  }
 }
 
 static void zclApp_RestoreAttributesFromNV(void) {
@@ -640,15 +690,15 @@ void zclApp_UpdateClock(void)
 static void zclApp_reqLocalTime(void) {
   zclReadCmd_t readCmd;
   readCmd.numAttr = 1;
-  readCmd.attrID[0] = 7;  // Attribute ID of LocalTime in Cluster Time is 7 (see ZigBee Cluster Library spec)
+  readCmd.attrID[0] = ATTRID_TIME_LOCAL_TIME;  // Attribute ID of LocalTime in Cluster Time is 7 (see ZigBee Cluster Library spec)
   zcl_SendRead(1, &inderect_DstAddr, GEN_TIME, &readCmd, ZCL_FRAME_CLIENT_SERVER_DIR, true, SeqNum++);
+  LREPMaster("TIME REQUEST SENT! \r\n");
 }
 
 static uint8 zclApp_ProcessInReadRspCmd(zclIncomingMsg_t *pInMsg)
 {
   zclReadRspCmd_t * readRspCmd;
   readRspCmd = (zclReadRspCmd_t *) pInMsg->attrCmd;
-  
   switch(pInMsg->clusterId)
   {
   case GEN_TIME:
@@ -658,6 +708,8 @@ static uint8 zclApp_ProcessInReadRspCmd(zclIncomingMsg_t *pInMsg)
       zclApp_GenTime_TimeUTC %= DAY;
       LREP("TIME = %ld\r\n", zclApp_GenTime_TimeUTC);
       osal_setClock(zclApp_GenTime_TimeUTC);
+
+      osal_start_reload_timer(zclApp_TaskID, APP_REQ_TIME_EVT, REQ_TIME_INTERVAL);
     }
   break;
   }

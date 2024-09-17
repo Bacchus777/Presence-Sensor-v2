@@ -23,16 +23,15 @@ extern "C" {
 #define APP_REPORT_EVT          0x0001
 #define APP_READ_SENSORS_EVT    0x0002
 #define APP_SAVE_ATTRS_EVT      0x0004
-#define APP_INIT_VALUES_EVT     0x0008
-#define APP_GET_DISTANCE_EVT    0x0016
+#define APP_REQ_TIME_EVT        0x0008  
+#define APP_GET_DISTANCE_EVT    0x0010
+  
+#define INIT_REQ_TIME_INTERVAL  ((uint32) 30000)
+#define REQ_TIME_INTERVAL       ((uint32) 1800000)
 
-#define REQ_TIME_INTERVAL ((uint32) 1800000)
-#define APP_REQ_TIME_EVT  0x0100  
-
-// 
-#define FIRST_ENDPOINT            1
-#define SECOND_ENDPOINT           2
-#define THIRD_ENDPOINT            3
+#define FIRST_ENDPOINT          1
+#define SECOND_ENDPOINT         2
+#define THIRD_ENDPOINT          3
 
 /*********************************************************************
  * MACROS

@@ -1446,7 +1446,6 @@
                 <option>
                     <name>CCDefines</name>
                     <state>HAL_BOARD_TARGET</state>
-                    <state>POWER_SAVING</state>
                 </option>
                 <option>
                     <name>CCPreprocFile</name>
@@ -1916,7 +1915,7 @@
                 </option>
                 <option>
                     <name>OutputFile</name>
-                    <state>GenericApp.d51</state>
+                    <state>PresenceSensor.d51</state>
                 </option>
                 <option>
                     <name>OutputFormat</name>
@@ -2457,7 +2456,7 @@
                 </option>
                 <option>
                     <name>General Xdata Stack Size</name>
-                    <state>0x400</state>
+                    <state>0x380</state>
                 </option>
                 <option>
                     <name>General Ext Stack Size</name>
@@ -8055,7 +8054,7 @@
             <name>$PROJ_DIR$\..\..\..\..\..\Components\stack\bdb\bdb_touchlink.c</name>
         </file>
         <file>
-            <name>$PROJ_DIR$\..\..\..\..\..\Components\stack\bdb\bdb_touchLink.h</name>
+            <name>$PROJ_DIR$\..\..\..\..\..\Components\stack\bdb\bdb_touchlink.h</name>
         </file>
         <file>
             <name>$PROJ_DIR$\..\..\..\..\..\Components\stack\bdb\bdb_touchlink_target.c</name>
@@ -8099,7 +8098,7 @@
                 <name>$PROJ_DIR$\..\..\..\..\..\Components\hal\include\hal_flash.h</name>
             </file>
             <file>
-                <name>$PROJ_DIR$\..\..\..\..\..\Components\hal\include\hal_led.h</name>
+                <name>$PROJ_DIR$\..\zstack-lib\hal_led.h</name>
             </file>
             <file>
                 <name>$PROJ_DIR$\..\..\..\..\..\Components\hal\include\hal_sleep.h</name>
@@ -8128,9 +8127,6 @@
                     </file>
                     <file>
                         <name>$PROJ_DIR$\..\..\..\..\..\Components\hal\target\CC2530EB\hal_flash.c</name>
-                    </file>
-                    <file>
-                        <name>$PROJ_DIR$\..\..\..\..\..\Components\hal\target\CC2530EB\hal_led.c</name>
                     </file>
                     <file>
                         <name>$PROJ_DIR$\..\..\..\..\..\Components\hal\target\CC2530EB\hal_sleep.c</name>
@@ -8544,7 +8540,7 @@
             <name>$PROJ_DIR$\..\..\..\Tools\CC2530DB\f8w2530.xcl</name>
         </file>
         <file>
-            <name>$PROJ_DIR$\..\..\..\Tools\CC2530DB\f8wConfig.cfg</name>
+            <name>$PROJ_DIR$\..\zstack-lib\f8wConfig.cfg</name>
         </file>
         <file>
             <name>$PROJ_DIR$\..\..\..\Tools\CC2530DB\f8wCoord.cfg</name>
@@ -8677,6 +8673,9 @@
         </file>
         <file>
             <name>$PROJ_DIR$\..\zstack-lib\hal_key.h</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\..\zstack-lib\hal_led.c</name>
         </file>
         <file>
             <name>$PROJ_DIR$\..\zstack-lib\utils.c</name>
