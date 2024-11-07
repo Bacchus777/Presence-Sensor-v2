@@ -4200,7 +4200,7 @@
                 </option>
                 <option>
                     <name>OutputFile</name>
-                    <state>GenericApp.d51</state>
+                    <state>PresenceSensor.d51</state>
                 </option>
                 <option>
                     <name>OutputFormat</name>
@@ -4741,7 +4741,7 @@
                 </option>
                 <option>
                     <name>General Xdata Stack Size</name>
-                    <state>0x500</state>
+                    <state>0x400</state>
                 </option>
                 <option>
                     <name>General Ext Stack Size</name>
@@ -4845,7 +4845,7 @@
                 </option>
                 <option>
                     <name>OGChipConfigPath</name>
-                    <state>$TOOLKIT_DIR$\config\devices\Texas Instruments\CC2530F256.i51</state>
+                    <state>D:\IAR Systems\Embedded Workbench 8.1\8051\bin\..\config\devices\Texas Instruments\CC25xx\3x\CC2530F256.i51</state>
                 </option>
             </data>
         </settings>
@@ -6487,7 +6487,7 @@
                 </option>
                 <option>
                     <name>OutputFile</name>
-                    <state>GenericApp.d51</state>
+                    <state>PresenceSensor.d51</state>
                 </option>
                 <option>
                     <name>OutputFormat</name>

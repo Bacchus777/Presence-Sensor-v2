@@ -140,12 +140,8 @@ const cId_t zclApp_InClusterListFirstEP[] = {
 #define APP_MAX_IN_CLUSTERS_FIRST_EP (sizeof(zclApp_InClusterListFirstEP) / sizeof(zclApp_InClusterListFirstEP[0]))
 
 const cId_t zclApp_OutClusterListFirstEP[] = {
-  ZCL_CLUSTER_ID_GEN_BASIC,
+  BASIC,
   GEN_ON_OFF,
-  OCCUPANCY, 
-  ILLUMINANCE,
-  ILLUMINANCE_LVL,
-  GEN_TIME
 };
 
 #define APP_MAX_OUT_CLUSTERS_FIRST_EP (sizeof(zclApp_OutClusterListFirstEP) / sizeof(zclApp_OutClusterListFirstEP[0]))
