@@ -60,9 +60,9 @@ const uint8 zclApp_PowerSource = POWER_SOURCE_MAINS_1_PHASE;
 
 
 #define DEFAULT_SensorEnabled   TRUE
-#define DEFAULT_Threshold       0
-#define DEFAULT_TimeLow         0
-#define DEFAULT_TimeHigh        0
+#define DEFAULT_Threshold       (uint16)25000
+#define DEFAULT_TimeLow         (uint32)28800
+#define DEFAULT_TimeHigh        (uint32)82800
 #define DEFAULT_LedMode         LED_ALWAYS
 
 
@@ -123,27 +123,36 @@ const cId_t zclApp_InClusterListFirstEP[] = {
   ZCL_CLUSTER_ID_GEN_IDENTIFY,
   ZCL_CLUSTER_ID_GEN_GROUPS,
   GEN_ON_OFF,
+  OCCUPANCY, 
   ILLUMINANCE,
+  ILLUMINANCE_LVL,
   GEN_TIME
 };
 
 #define APP_MAX_IN_CLUSTERS_FIRST_EP (sizeof(zclApp_InClusterListFirstEP) / sizeof(zclApp_InClusterListFirstEP[0]))
 
 const cId_t zclApp_OutClusterListFirstEP[] = {
-  ZCL_CLUSTER_ID_GEN_BASIC,
+  BASIC,
   GEN_ON_OFF,
-  OCCUPANCY, 
-  ILLUMINANCE,
-  GEN_TIME
 };
 
 #define APP_MAX_OUT_CLUSTERS_FIRST_EP (sizeof(zclApp_OutClusterListFirstEP) / sizeof(zclApp_OutClusterListFirstEP[0]))
+
+
 
 const cId_t zclApp_OutClusterListSecondEP[] = {
   GEN_ON_OFF
 };
 
 #define APP_MAX_OUT_CLUSTERS_SECOND_EP (sizeof(zclApp_OutClusterListSecondEP) / sizeof(zclApp_OutClusterListSecondEP[0]))
+
+const cId_t zclApp_InClusterListSecondEP[] = {
+  GEN_ON_OFF
+};
+
+#define APP_MAX_IN_CLUSTERS_SECOND_EP (sizeof(zclApp_InClusterListSecondEP) / sizeof(zclApp_InClusterListSecondEP[0]))
+
+
 
 const cId_t zclApp_InClusterListThirdEP[] = {
   GEN_ON_OFF
@@ -176,8 +185,8 @@ SimpleDescriptionFormat_t zclApp_SecondEP = {
     ZCL_HA_DEVICEID_SIMPLE_SENSOR,              //  uint16 AppDeviceId[2];
     APP_DEVICE_VERSION,                         //  int   AppDevVer:4;
     APP_FLAGS,                                  //  int   AppFlags:4;
-    0,                                          //  byte  AppNumInClusters;
-    (cId_t *)NULL,                              //  byte *pAppInClusterList;
+    APP_MAX_IN_CLUSTERS_SECOND_EP,              //  byte  AppNumInClusters;
+    (cId_t *)zclApp_InClusterListSecondEP,      //  byte *pAppInClusterList;
     APP_MAX_OUT_CLUSTERS_SECOND_EP,             //  byte  AppNumInClusters;
     (cId_t *)zclApp_OutClusterListSecondEP      //  byte *pAppInClusterList;
 };

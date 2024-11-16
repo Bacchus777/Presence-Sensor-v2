@@ -114,8 +114,6 @@ void zclApp_ReportOnOff( void );
 void zclApp_ReportOutput( void );
 // Обновление времени
 void zclApp_UpdateClock(void);
-// Обновление времени
-void zclApp_InitValues(void);
 
 
 /*********************************************************************
@@ -163,8 +161,7 @@ void zclApp_Init(byte task_id) {
   LREP("Build %s \r\n", zclApp_DateCodeNT);
   
   osal_start_reload_timer(zclApp_TaskID, APP_REPORT_EVT, APP_REPORT_DELAY);
-  osal_start_reload_timer(zclApp_TaskID, APP_REQ_TIME_EVT, REQ_TIME_INTERVAL);
-  osal_start_reload_timer(zclApp_TaskID, APP_INIT_VALUES_EVT, 90000);
+  osal_start_reload_timer(zclApp_TaskID, APP_REQ_TIME_EVT, INIT_REQ_TIME_INTERVAL);
   
   LREP("START APP_REPORT_CLOCK_EVT\r\n");
   
@@ -220,12 +217,6 @@ uint16 zclApp_event_loop(uint8 task_id, uint16 events) {
       zclApp_reqLocalTime();      
       return (events ^ APP_REQ_TIME_EVT);
     }
-    if (events & APP_INIT_VALUES_EVT) {
-      LREPMaster("APP_INIT_VALUES_EVT\r\n");
-      zclApp_InitValues();      
-      return (events ^ APP_INIT_VALUES_EVT);
-    }
-
     return 0;
 }
 
@@ -351,7 +342,7 @@ void applyLed ( void )
 
 static void zclApp_ReadIlluminance(void) {
   HalLedSet(HAL_LED_4, HAL_LED_MODE_ON); 
-  zclApp_IlluminanceSensor_MeasuredValue = adcReadSampled(LUMOISITY_PIN, HAL_ADC_RESOLUTION_14, HAL_ADC_REF_AVDD, 5);
+  zclApp_IlluminanceSensor_MeasuredValue = adcReadSampled(LUMOISITY_PIN, HAL_ADC_RESOLUTION_14, HAL_ADC_REF_AVDD, 5) * 5;
   HalLedSet(HAL_LED_4, HAL_LED_MODE_OFF);
   
   bdb_RepChangedAttrValue(zclApp_FirstEP.EndPoint, ILLUMINANCE, ATTRID_MS_ILLUMINANCE_MEASURED_VALUE);
@@ -496,10 +487,7 @@ void zclApp_UpdateClock(void)
   osalTimeUpdate();
   zclApp_GenTime_TimeUTC = osal_getClock();
   
-  if (zclApp_GenTime_TimeUTC > DAY) {
-    zclApp_GenTime_TimeUTC -= DAY;
-    osal_setClock(zclApp_GenTime_TimeUTC);
-  }
+  zclApp_GenTime_TimeUTC %= DAY;
  
   LREP("CLOCK = %ld\r\n", osal_getClock());
   LREP("TIME = %ld\r\n", zclApp_GenTime_TimeUTC);
@@ -510,15 +498,15 @@ void zclApp_UpdateClock(void)
 static void zclApp_reqLocalTime(void) {
   zclReadCmd_t readCmd;
   readCmd.numAttr = 1;
-  readCmd.attrID[0] = 7;  // Attribute ID of LocalTime in Cluster Time is 7 (see ZigBee Cluster Library spec)
+  readCmd.attrID[0] = ATTRID_TIME_LOCAL_TIME;  // Attribute ID of LocalTime in Cluster Time is 7 (see ZigBee Cluster Library spec)
   zcl_SendRead(1, &inderect_DstAddr, GEN_TIME, &readCmd, ZCL_FRAME_CLIENT_SERVER_DIR, true, SeqNum++);
+  LREPMaster("TIME REQUEST SENT! \r\n");
 }
 
 static uint8 zclApp_ProcessInReadRspCmd(zclIncomingMsg_t *pInMsg)
 {
   zclReadRspCmd_t * readRspCmd;
   readRspCmd = (zclReadRspCmd_t *) pInMsg->attrCmd;
-  
   switch(pInMsg->clusterId)
   {
   case GEN_TIME:
@@ -528,69 +516,10 @@ static uint8 zclApp_ProcessInReadRspCmd(zclIncomingMsg_t *pInMsg)
       zclApp_GenTime_TimeUTC %= DAY;
       LREP("TIME = %ld\r\n", zclApp_GenTime_TimeUTC);
       osal_setClock(zclApp_GenTime_TimeUTC);
+
+      osal_start_reload_timer(zclApp_TaskID, APP_REQ_TIME_EVT, REQ_TIME_INTERVAL);
     }
   break;
   }
   return TRUE;
-}
-
-void zclApp_InitValues(void)
-{
-  uint8 NUM_ATTRIBUTES;
-  
-  zclApp_reqLocalTime();
-  
-  NUM_ATTRIBUTES = 3;
-  zclReportCmd_t *pReportCmd;
-  pReportCmd = osal_mem_alloc(sizeof(zclReportCmd_t) + (NUM_ATTRIBUTES * sizeof(zclReport_t)));
-  if (pReportCmd != NULL) {
-    pReportCmd->numAttr = NUM_ATTRIBUTES;
-
-    pReportCmd->attrList[0].attrID = ATTRID_TIME_TIME;
-    pReportCmd->attrList[0].dataType = ZCL_UTC;
-    pReportCmd->attrList[0].attrData = (void *)(&zclApp_GenTime_TimeUTC);
-
-    pReportCmd->attrList[1].attrID = ATTRID_TIME_DST_START;
-    pReportCmd->attrList[1].dataType = ZCL_UINT32;
-    pReportCmd->attrList[1].attrData = (void *)(&zclApp_Config.TimeLow);
-
-    pReportCmd->attrList[2].attrID = ATTRID_TIME_DST_END;
-    pReportCmd->attrList[2].dataType = ZCL_INT32;
-    pReportCmd->attrList[2].attrData = (void *)(&zclApp_Config.TimeHigh);
-    
-    afAddrType_t tmp_inderect_DstAddr = {.addrMode = (afAddrMode_t)AddrNotPresent, .endPoint = FIRST_ENDPOINT, .addr.shortAddr = 0};
-    zcl_SendReportCmd(FIRST_ENDPOINT, &tmp_inderect_DstAddr, GEN_TIME, pReportCmd, ZCL_FRAME_CLIENT_SERVER_DIR, TRUE, bdb_getZCLFrameCounter());
-  }
-  osal_mem_free(pReportCmd);
-
-  NUM_ATTRIBUTES = 1;
-  pReportCmd = osal_mem_alloc(sizeof(zclReportCmd_t) + (NUM_ATTRIBUTES * sizeof(zclReport_t)));
-  if (pReportCmd != NULL) {
-    pReportCmd->numAttr = NUM_ATTRIBUTES;
-
-    pReportCmd->attrList[0].attrID = ATTRID_MS_ILLUMINANCE_TARGET_LEVEL;
-    pReportCmd->attrList[0].dataType = ZCL_UINT16;
-    pReportCmd->attrList[0].attrData = (void *)(&zclApp_Config.Threshold);
-
-    afAddrType_t tmp_inderect_DstAddr = {.addrMode = (afAddrMode_t)AddrNotPresent, .endPoint = FIRST_ENDPOINT, .addr.shortAddr = 0};
-    zcl_SendReportCmd(FIRST_ENDPOINT, &tmp_inderect_DstAddr, ILLUMINANCE_LVL, pReportCmd, ZCL_FRAME_CLIENT_SERVER_DIR, TRUE, bdb_getZCLFrameCounter());
-  }
-  osal_mem_free(pReportCmd);
-  
-  NUM_ATTRIBUTES = 1;
-  pReportCmd = osal_mem_alloc(sizeof(zclReportCmd_t) + (NUM_ATTRIBUTES * sizeof(zclReport_t)));
-  if (pReportCmd != NULL) {
-    pReportCmd->numAttr = NUM_ATTRIBUTES;
-
-    pReportCmd->attrList[0].attrID = ATTRID_LED_MODE;
-    pReportCmd->attrList[0].dataType = ZCL_DATATYPE_ENUM8;
-    pReportCmd->attrList[0].attrData = (void *)(&zclApp_Config.LedMode);
-
-    afAddrType_t tmp_inderect_DstAddr = {.addrMode = (afAddrMode_t)AddrNotPresent, .endPoint = THIRD_ENDPOINT, .addr.shortAddr = 0};
-    zcl_SendReportCmd(THIRD_ENDPOINT, &tmp_inderect_DstAddr, GEN_ON_OFF, pReportCmd, ZCL_FRAME_CLIENT_SERVER_DIR, TRUE, bdb_getZCLFrameCounter());
-  }
-  osal_mem_free(pReportCmd);
-  
-  osal_stop_timerEx(zclApp_TaskID, APP_INIT_VALUES_EVT);
-  osal_clear_event(zclApp_TaskID, APP_INIT_VALUES_EVT);
 }

@@ -8130,7 +8130,7 @@
                         <name>$PROJ_DIR$\..\..\..\..\..\Components\hal\target\CC2530EB\hal_flash.c</name>
                     </file>
                     <file>
-                        <name>$PROJ_DIR$\..\..\..\..\..\Components\hal\target\CC2530EB\hal_led.c</name>
+                        <name>$PROJ_DIR$\..\zstack-lib\hal_led.c</name>
                     </file>
                     <file>
                         <name>$PROJ_DIR$\..\..\..\..\..\Components\hal\target\CC2530EB\hal_sleep.c</name>
@@ -8155,6 +8155,9 @@
                     </file>
                     <file>
                         <name>$PROJ_DIR$\..\..\..\..\..\Components\hal\target\CC2530EB\hal_dma.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\..\zstack-lib\hal_led.h</name>
                     </file>
                     <file>
                         <name>$PROJ_DIR$\..\..\..\..\..\Components\hal\target\CC2530EB\hal_mcu.h</name>
@@ -8544,7 +8547,7 @@
             <name>$PROJ_DIR$\..\..\..\Tools\CC2530DB\f8w2530.xcl</name>
         </file>
         <file>
-            <name>$PROJ_DIR$\..\..\..\Tools\CC2530DB\f8wConfig.cfg</name>
+            <name>$PROJ_DIR$\..\zstack-lib\f8wConfig.cfg</name>
         </file>
         <file>
             <name>$PROJ_DIR$\..\..\..\Tools\CC2530DB\f8wCoord.cfg</name>
