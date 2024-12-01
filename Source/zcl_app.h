@@ -25,7 +25,7 @@ extern "C" {
 #define APP_SAVE_ATTRS_EVT      0x0004
 #define APP_REQ_TIME_EVT        0x0008  
 #define APP_GET_DISTANCE_EVT    0x0010
-#define APP_ENABLE_ENG_EVT      0x0020
+//#define APP_ENABLE_ENG_EVT      0x0020
   
 #define INIT_REQ_TIME_INTERVAL  ((uint32) 30000)
 #define REQ_TIME_INTERVAL       ((uint32) 1800000)
@@ -57,6 +57,7 @@ extern "C" {
 #define ATTRID_MS_OCCUPANCY_TARGET_DISTANCE               0xF005
 #define ATTRID_MS_OCCUPANCY_TARGET_TYPE                   0xF006
 #define ATTRID_MS_DISTANCE_MEASUREMENT_PERIOD             0xF007
+#define ATTRID_ILLUMINANCE_THRESHOLD                      0xF001
   
 #define ZCL_UINT8       ZCL_DATATYPE_UINT8
 #define ZCL_UINT16      ZCL_DATATYPE_UINT16

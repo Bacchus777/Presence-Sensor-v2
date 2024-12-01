@@ -216,7 +216,6 @@ int8 findSubstring(uint8 *array, uint8 arraySize, uint8 *sequence, uint8 sequenc
 
 void SerialApp_CallBack(uint8 port, uint8 event)   // Receive data will trigger
 {
-  uint8 lum;
   if (readHLK)
   {
     uint8 response[RESPONSE_LENGHT] = {0x00};
@@ -234,35 +233,40 @@ void SerialApp_CallBack(uint8 port, uint8 event)   // Receive data will trigger
     LREP("startBit = %d\r\n", startBit);
     
     if (startBit >= 0) {
-
+      int8 endBit = findSubstring(response, RESPONSE_LENGHT, endBits, 4, startBit);
       
-      if (findSubstring(response, RESPONSE_LENGHT, endBits, 4, startBit) > 0) {
-    // установка конфигурационного  режима
+      if (endBit > startBit) {
+        if (response[4 + startBit] == 0x23) {
 
-        zclApp_Distance = (uint16)(response[16 + startBit] * 0x100) + (uint16)response[15 + startBit];
-        lum = (uint8)(response[37 + startBit]);
-        zclApp_IlluminanceSensor_MeasuredValue = (uint32)(((lum > 80)?(lum - 80):1) * 250);
-        LREP("zclApp_Distance = %d\r\n", zclApp_Distance);
-        
-        switch (response[8 + startBit]) {
-        case 0x00: 
-          zclApp_TargetType = TARGET_NONE;
-          break;
-        case 0x01: 
-          zclApp_TargetType = TARGET_MOVING;
-          break;
-        case 0x02: 
-          zclApp_TargetType = TARGET_STATIONARY;
-          break;
-        case 0x03: 
-          zclApp_TargetType = TARGET_ST_AND_MOV;
-          break;
+          zclApp_Distance = (uint16)(response[16 + startBit] * 0x100) + (uint16)response[15 + startBit];
+          uint8 lum = (uint8)(response[37 + startBit]);
+          LREP("Ill = 0x%x\r\n", response[37 + startBit]);
+          zclApp_IlluminanceSensor_MeasuredValue = (uint32)(((lum > 80)?(lum - 80):1) * 250);
+          LREP("zclApp_Distance = %d\r\n", zclApp_Distance);
+          
+          switch (response[8 + startBit]) {
+          case 0x00: 
+            zclApp_TargetType = TARGET_NONE;
+            break;
+          case 0x01: 
+            zclApp_TargetType = TARGET_MOVING;
+            break;
+          case 0x02: 
+            zclApp_TargetType = TARGET_STATIONARY;
+            break;
+          case 0x03: 
+            zclApp_TargetType = TARGET_ST_AND_MOV;
+            break;
+          }
+          if (zclApp_IlluminanceSensor_MeasuredValue > 250)
+            bdb_RepChangedAttrValue(zclApp_FirstEP.EndPoint, ILLUMINANCE, ATTRID_MS_ILLUMINANCE_MEASURED_VALUE);
+              
+          updateOccupancy(zclApp_Occupied);
+          
+          readHLK = FALSE;
         }
-        bdb_RepChangedAttrValue(zclApp_FirstEP.EndPoint, ILLUMINANCE, ATTRID_MS_ILLUMINANCE_MEASURED_VALUE);
-            
-        updateOccupancy(zclApp_Occupied);
-        
-        readHLK = FALSE;
+        else 
+          EnableEngMode(); 
       }
     }
   }
@@ -287,7 +291,7 @@ static void zclApp_InitHLKUart(void) {
 }
 
 static void zclApp_ReadHLK(void) {
-  LREPMaster("Read distance \r\n");
+  LREPMaster("Read HLK \r\n");
 
   readHLK = TRUE;
 }
@@ -346,13 +350,13 @@ uint16 zclApp_event_loop(uint8 task_id, uint16 events) {
       zclApp_ReadHLK();
       return (events ^ APP_GET_DISTANCE_EVT);
     }
-    if (events & APP_ENABLE_ENG_EVT) {
+/*    if (events & APP_ENABLE_ENG_EVT) {
       LREPMaster("APP_ENABLE_ENG_EVT\r\n");
       EnableEngMode();
       return (events ^ APP_ENABLE_ENG_EVT);
     }
     
-
+*/
     return 0;
 }
 
@@ -371,25 +375,22 @@ static void zclApp_HandleKeys(byte portAndAction, byte keyCode) {
     zclCommissioning_HandleKeys(portAndAction, keyCode);
 
     if (portAndAction & HAL_KEY_PORT0) {
-    LREPMaster("OCCUPIED\r\n");
 
-    if (portAndAction & HAL_KEY_PRESS) {
-      
-      
-      LREPMaster("read distance\r\n");
-      updateOccupancy(TRUE);
-      zclApp_ReadHLK();
-      osal_start_timerEx(zclApp_TaskID, APP_REPORT_EVT, 200);
-      if (zclApp_Config.MeasurementPeriod > 0)
-        osal_start_reload_timer(zclApp_TaskID, APP_GET_DISTANCE_EVT, zclApp_Config.MeasurementPeriod * 1000);
+      if (portAndAction & HAL_KEY_PRESS) {
+        LREPMaster("OCCUPIED\r\n");
+        updateOccupancy(TRUE);
+        zclApp_ReadHLK();
+        osal_start_timerEx(zclApp_TaskID, APP_REPORT_EVT, 200);
+        if (zclApp_Config.MeasurementPeriod > 0)
+          osal_start_reload_timer(zclApp_TaskID, APP_GET_DISTANCE_EVT, zclApp_Config.MeasurementPeriod * 1000);
+      }
+      if (portAndAction & HAL_KEY_RELEASE) {
+        updateOccupancy(FALSE);
+        osal_start_timerEx(zclApp_TaskID, APP_REPORT_EVT, 200);
+        osal_stop_timerEx(zclApp_TaskID, APP_GET_DISTANCE_EVT);
+        osal_clear_event(zclApp_TaskID, APP_GET_DISTANCE_EVT);
+      }
     }
-    if (portAndAction & HAL_KEY_RELEASE) {
-      updateOccupancy(FALSE);
-      osal_start_timerEx(zclApp_TaskID, APP_REPORT_EVT, 200);
-      osal_stop_timerEx(zclApp_TaskID, APP_GET_DISTANCE_EVT);
-      osal_clear_event(zclApp_TaskID, APP_GET_DISTANCE_EVT);
-    }
-  }
 }
 
 static void zclApp_Report(void) {
@@ -424,13 +425,13 @@ static void zclApp_ReadSensors(void) {
     currentSensorsReadingPhase = 0;
     break;
   }
-
+/*
   LREP("currentSensorsReadingPhase %d\r\n", currentSensorsReadingPhase);
 
   if (currentSensorsReadingPhase != 0) {
       osal_start_timerEx(zclApp_TaskID, APP_READ_SENSORS_EVT, 10);
   }
-
+*/
 }
 
 // Изменение состояния датчика
@@ -484,7 +485,7 @@ void applySensor ( void )
     // включаем светодиод 2
     HalLedSet ( HAL_LED_2, HAL_LED_MODE_ON );
     LREPMaster("ENABLE SENSOR\r\n");
-
+//    osal_start_reload_timer(zclApp_TaskID, APP_ENABLE_ENG_EVT, 10000);
   } else {
     // гасим светодиод 2
     HalLedSet ( HAL_LED_2, HAL_LED_MODE_OFF );
@@ -498,7 +499,6 @@ void applyLed ( void )
   if (zclApp_Led) {
     // иначе включаем светодиод 1
     HalLedSet ( HAL_LED_1, HAL_LED_MODE_ON );
-    osal_start_reload_timer(zclApp_TaskID, APP_ENABLE_ENG_EVT, 10000);
   } else {
     // то гасим светодиод 1
     HalLedSet ( HAL_LED_1, HAL_LED_MODE_OFF );
@@ -732,6 +732,6 @@ static void EnableEngMode(void)
   HalUARTWrite(HLK_PORT, engMode, sizeof(engMode) / sizeof(engMode[0])); 
   user_delay_ms(200);
   HalUARTWrite(HLK_PORT, stopConfig, sizeof(stopConfig) / sizeof(stopConfig[0])); 
-  osal_stop_timerEx(zclApp_TaskID, APP_ENABLE_ENG_EVT);
-  osal_clear_event(zclApp_TaskID, APP_ENABLE_ENG_EVT);
+//  osal_stop_timerEx(zclApp_TaskID, APP_ENABLE_ENG_EVT);
+//  osal_clear_event(zclApp_TaskID, APP_ENABLE_ENG_EVT);
 }

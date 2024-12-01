@@ -53,7 +53,7 @@
 #if defined (HAL_BOARD_CHDTECH_DEV)
   #define HAL_NUM_LEDS            3
 #elif defined(HAL_BOARD_TARGET)
-  #define HAL_NUM_LEDS            4
+  #define HAL_NUM_LEDS            3
 #else
   #error Unknown Board Indentifier
 #endif

@@ -58,7 +58,7 @@ const uint8 zclApp_ApplicationVersion = 3;
 const uint8 zclApp_StackVersion = 4;
 
 const uint8 zclApp_ManufacturerName[] = {7, 'B', 'a', 'c', 'c', 'h', 'u', 's'};
-const uint8 zclApp_ModelId[] = {20, 'P', 'r', 'e', 's', 'e', 'n', 'c', 'e', '_', 'S', 'e', 'n', 's', 'o', 'r', '_', 'v', '2', '.', '5'};
+const uint8 zclApp_ModelId[] = {20, 'P', 'r', 'e', 's', 'e', 'n', 'c', 'e', '_', 'S', 'e', 'n', 's', 'o', 'r', '_', 'v', '2', '.', '6'};
 const uint8 zclApp_PowerSource = POWER_SOURCE_MAINS_1_PHASE;
 
 
@@ -105,7 +105,7 @@ CONST zclAttrRec_t zclApp_AttrsFirstEP[] = {
     {OCCUPANCY, {ATTRID_MS_DISTANCE_MEASUREMENT_PERIOD, ZCL_UINT16, RW, (void *)&zclApp_Config.MeasurementPeriod}},
     
     {ILLUMINANCE, {ATTRID_MS_ILLUMINANCE_MEASURED_VALUE, ZCL_UINT16, RR, (void *)&zclApp_IlluminanceSensor_MeasuredValue}},
-    {ILLUMINANCE_LVL, {ATTRID_MS_ILLUMINANCE_TARGET_LEVEL, ZCL_UINT16, RW, (void *)&zclApp_Config.Threshold}},
+    {ILLUMINANCE, {ATTRID_ILLUMINANCE_THRESHOLD, ZCL_UINT16, RW, (void *)&zclApp_Config.Threshold}},
 
     {GEN_TIME, {ATTRID_TIME_TIME, ZCL_UTC, RW, (void *)&zclApp_GenTime_TimeUTC}},
     {GEN_TIME, {ATTRID_TIME_LOCAL_TIME, ZCL_UINT32, RW, (void *)&zclApp_GenTime_TimeUTC}},
@@ -133,7 +133,6 @@ const cId_t zclApp_InClusterListFirstEP[] = {
   GEN_ON_OFF,
   OCCUPANCY, 
   ILLUMINANCE,
-  ILLUMINANCE_LVL,
   GEN_TIME
 };
 

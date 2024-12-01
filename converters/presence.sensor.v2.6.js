@@ -33,12 +33,12 @@ const str_min_to_time = (str_min) => {
 
 const fz_local = {
     illuminance_config: {
-        cluster: 'msIlluminanceLevelSensing',
+        cluster: 'msIlluminanceMeasurement',
         type: ['readResponse'],
         convert: (model, msg, publish, options, meta) => {
             const result = {};
-            if (msg.data.hasOwnProperty(0x10)) {
-                result.illuminance_threshold = msg.data[0x10];
+            if (msg.data.hasOwnProperty(0xF001)) {
+                result.illuminance_threshold = msg.data[0xF001];
             }
             return result;
         },
@@ -83,14 +83,14 @@ const fz_local = {
         type: ['attributeReport', 'readResponse'],
         convert: (model, msg, publish, options, meta) => {
             const result = {};
-            if (msg.data.hasOwnProperty(0x23)) {
-                result.target_distance =  msg.data[0x0023];
+            if (msg.data.hasOwnProperty(0xF005)) {
+                result.target_distance =  msg.data[0xF005];
             }
-            if (msg.data.hasOwnProperty(0x24)) {
-                result.target_type = ['None', 'Moving', 'Stationary', 'Moving and stationary'][msg.data[0x24]];
+            if (msg.data.hasOwnProperty(0xF006)) {
+                result.target_type = ['None', 'Moving', 'Stationary', 'Moving and stationary'][msg.data[0xF006]];
             }
-            if (msg.data.hasOwnProperty(0x25)) {
-                result.measurement_period = msg.data[0x0025];
+            if (msg.data.hasOwnProperty(0xF007)) {
+                result.measurement_period = msg.data[0xF007];
             }
             return result;
         },
@@ -104,7 +104,7 @@ const tz_local = {
             value *= 1;
             const firstEndpoint = meta.device.getEndpoint(1);
             const payloads = {
-                illuminance_threshold: ['msIlluminanceLevelSensing', {0x10: {value, type: ZCL_DATATYPE_UINT16}}],
+                illuminance_threshold: ['msIlluminanceMeasurement', {0xF001: {value, type: ZCL_DATATYPE_UINT16}}],
             };
             await firstEndpoint.write(payloads[key][0], payloads[key][1]);
             return {
@@ -114,7 +114,7 @@ const tz_local = {
         convertGet: async (entity, key, meta) => {
             const firstEndpoint = meta.device.getEndpoint(1);
             const payloads = {
-                illuminance_threshold: ['msIlluminanceLevelSensing', 'illuminanceTargetLevel'],
+                illuminance_threshold: ['msIlluminanceMeasurement', {0xF001: {value, type: ZCL_DATATYPE_UINT16}}],
             };
             await firstEndpoint.read(payloads[key][0], [payloads[key][1]]);
         },
@@ -185,7 +185,7 @@ const tz_local = {
             const firstEndpoint = meta.device.getEndpoint(1);
             value *= 1;
             const payloads = {
-                measurement_period: ['msOccupancySensing', {0x0025: {value, type: ZCL_DATATYPE_UINT16}}],
+                measurement_period: ['msOccupancySensing', {0xF007: {value, type: ZCL_DATATYPE_UINT16}}],
             };
             await firstEndpoint.write(payloads[key][0], payloads[key][1]);
             return {
@@ -195,7 +195,7 @@ const tz_local = {
         convertGet: async (entity, key, meta) => {
             const firstEndpoint = meta.device.getEndpoint(1);
             const payloads = {
-                measurement_period: ['msOccupancySensing', 0x0025],
+                measurement_period: ['msOccupancySensing', 0xF007],
             };
             await firstEndpoint.read(payloads[key][0], [payloads[key][1]]);
         },
@@ -203,8 +203,8 @@ const tz_local = {
 };
 
 const device = {
-	zigbeeModel: ['Presence_Sensor_v2.5'],
-	model: 'Presence_Sensor_v2.5',
+	zigbeeModel: ['Presence_Sensor_v2.6'],
+	model: 'Presence_Sensor_v2.6',
 	vendor: 'Bacchus',
     description: 'Bacchus presence sensor with illuminance',
 	supports: 'on/off, occupancy, illuminance', 
@@ -234,7 +234,7 @@ const device = {
 
         const overrides = { min: 0, max: 3600, change: 0 };
 
-        await reporting.bind(firstEndpoint, coordinatorEndpoint, ['genOnOff', 'genTime', 'msOccupancySensing', 'msIlluminanceMeasurement', 'msIlluminanceLevelSensing']);
+        await reporting.bind(firstEndpoint, coordinatorEndpoint, ['genOnOff', 'genTime', 'msOccupancySensing', 'msIlluminanceMeasurement']);
         await reporting.onOff(firstEndpoint, overrides);
 		await reporting.illuminance(firstEndpoint, overrides);
 		await reporting.occupancy(firstEndpoint, overrides);
@@ -245,12 +245,14 @@ const device = {
         await reporting.bind(thirdEndpoint, coordinatorEndpoint, ['genOnOff']);
         await reporting.onOff(thirdEndpoint);
 
-        await firstEndpoint.read('msIlluminanceLevelSensing', ['illuminanceTargetLevel']);
+        await firstEndpoint.read('msIlluminanceMeasurement', [0xF001]);
         await firstEndpoint.read('genTime', ['dstStart']);
         await firstEndpoint.read('genTime', ['dstEnd']);
-
+        await firstEndpoint.read('msOccupancySensing', [0xF007]);
         await firstEndpoint.read('genOnOff', ['onOff']);
+
         await thirdEndpoint.read('genOnOff', [0xF004]);
+
         },
 
 	exposes: [
@@ -258,7 +260,7 @@ const device = {
 			e.occupancy(), 
 			e.illuminance(), 
 			e.illuminance_lux(), 
-			e.numeric('illuminance_threshold', ACCESS_STATE | ACCESS_WRITE | ACCESS_READ).withValueMin(0).withValueMax(50000).withDescription('Минимальная освещенность срабатывания'),
+			e.numeric('illuminance_threshold', ACCESS_STATE | ACCESS_WRITE | ACCESS_READ).withValueMin(0).withValueMax(50000).withDescription('Illuminance threshold'),
             e.text('local_time', ACCESS_STATE | ACCESS_READ).withDescription('Current time'),
 			e.text('min_time', ACCESS_STATE | ACCESS_WRITE | ACCESS_READ).withDescription('Day start'),
 			e.text('max_time', ACCESS_STATE | ACCESS_WRITE | ACCESS_READ).withDescription('Day end'),

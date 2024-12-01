@@ -51,7 +51,7 @@
     #define HLK_PORT  HAL_UART_PORT_0
     #define HAL_UART_DMA 1
     #define HAL_UART_ISR 2
-    #define INT_HEAP_LEN (2256 - 0xE)
+    #define INT_HEAP_LEN 2060//(2256 - 0xE)
 #elif defined(HAL_BOARD_CHDTECH_DEV)
     #define HAL_KEY_P0_INPUT_PINS BV(6)
     #define HAL_KEY_P0_INPUT_PINS_EDGE HAL_KEY_RISING_EDGE
