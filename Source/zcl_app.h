@@ -34,6 +34,10 @@ extern "C" {
 #define SECOND_ENDPOINT         2
 #define THIRD_ENDPOINT          3
 
+#define FIRST_ENDPOINT            1
+#define SECOND_ENDPOINT           2
+#define THIRD_ENDPOINT            3
+
 /*********************************************************************
  * MACROS
  */

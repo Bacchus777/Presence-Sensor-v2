@@ -670,10 +670,7 @@ void zclApp_UpdateClock(void)
   osalTimeUpdate();
   zclApp_GenTime_TimeUTC = osal_getClock();
   
-  if (zclApp_GenTime_TimeUTC > DAY) {
-    zclApp_GenTime_TimeUTC -= DAY;
-    osal_setClock(zclApp_GenTime_TimeUTC);
-  }
+  zclApp_GenTime_TimeUTC %= DAY;
  
   LREP("CLOCK = %ld\r\n", osal_getClock());
   LREP("TIME = %ld\r\n", zclApp_GenTime_TimeUTC);
