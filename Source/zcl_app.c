@@ -46,7 +46,7 @@
  * CONSTANTS
  */
 
-#define RESPONSE_LENGHT     88
+#define RESPONSE_LENGHT     66
 #define HLK_RESPONSE_LENGHT 44
 
 
@@ -239,10 +239,9 @@ void SerialApp_CallBack(uint8 port, uint8 event)   // Receive data will trigger
         if (response[4 + startBit] == 0x23) {
 
           zclApp_Distance = (uint16)(response[16 + startBit] * 0x100) + (uint16)response[15 + startBit];
-          uint8 lum = (uint8)(response[37 + startBit]);
-          LREP("Ill = 0x%x\r\n", response[37 + startBit]);
-          zclApp_IlluminanceSensor_MeasuredValue = (uint32)(((lum > 80)?(lum - 80):1) * 250);
           LREP("zclApp_Distance = %d\r\n", zclApp_Distance);
+
+          zclApp_IlluminanceSensor_MeasuredValue = (uint32)((response[37 + startBit]) * 155);
           
           switch (response[8 + startBit]) {
           case 0x00: 
@@ -258,8 +257,8 @@ void SerialApp_CallBack(uint8 port, uint8 event)   // Receive data will trigger
             zclApp_TargetType = TARGET_ST_AND_MOV;
             break;
           }
-          if (zclApp_IlluminanceSensor_MeasuredValue > 250)
-            bdb_RepChangedAttrValue(zclApp_FirstEP.EndPoint, ILLUMINANCE, ATTRID_MS_ILLUMINANCE_MEASURED_VALUE);
+
+          bdb_RepChangedAttrValue(zclApp_FirstEP.EndPoint, ILLUMINANCE, ATTRID_MS_ILLUMINANCE_MEASURED_VALUE);
               
           updateOccupancy(zclApp_Occupied);
           
@@ -350,13 +349,6 @@ uint16 zclApp_event_loop(uint8 task_id, uint16 events) {
       zclApp_ReadHLK();
       return (events ^ APP_GET_DISTANCE_EVT);
     }
-/*    if (events & APP_ENABLE_ENG_EVT) {
-      LREPMaster("APP_ENABLE_ENG_EVT\r\n");
-      EnableEngMode();
-      return (events ^ APP_ENABLE_ENG_EVT);
-    }
-    
-*/
     return 0;
 }
 
@@ -425,13 +417,6 @@ static void zclApp_ReadSensors(void) {
     currentSensorsReadingPhase = 0;
     break;
   }
-/*
-  LREP("currentSensorsReadingPhase %d\r\n", currentSensorsReadingPhase);
-
-  if (currentSensorsReadingPhase != 0) {
-      osal_start_timerEx(zclApp_TaskID, APP_READ_SENSORS_EVT, 10);
-  }
-*/
 }
 
 // Изменение состояния датчика
