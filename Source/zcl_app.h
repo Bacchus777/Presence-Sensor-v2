@@ -24,9 +24,15 @@ extern "C" {
 #define APP_READ_SENSORS_EVT    0x0002
 #define APP_SAVE_ATTRS_EVT      0x0004
 #define APP_REQ_TIME_EVT        0x0008  
-
+#define APP_GET_DISTANCE_EVT    0x0010
+//#define APP_ENABLE_ENG_EVT      0x0020
+  
 #define INIT_REQ_TIME_INTERVAL  ((uint32) 30000)
 #define REQ_TIME_INTERVAL       ((uint32) 1800000)
+
+#define FIRST_ENDPOINT          1
+#define SECOND_ENDPOINT         2
+#define THIRD_ENDPOINT          3
 
 #define FIRST_ENDPOINT            1
 #define SECOND_ENDPOINT           2
@@ -51,7 +57,11 @@ extern "C" {
 #define ILLUMINANCE_LVL ZCL_CLUSTER_ID_MS_ILLUMINANCE_LEVEL_SENSING_CONFIG
 #define GEN_TIME        ZCL_CLUSTER_ID_GEN_TIME
 
-#define ATTRID_LED_MODE 0xF004
+#define ATTRID_LED_MODE                                   0xF004
+#define ATTRID_MS_OCCUPANCY_TARGET_DISTANCE               0xF005
+#define ATTRID_MS_OCCUPANCY_TARGET_TYPE                   0xF006
+#define ATTRID_MS_DISTANCE_MEASUREMENT_PERIOD             0xF007
+#define ATTRID_ILLUMINANCE_THRESHOLD                      0xF001
   
 #define ZCL_UINT8       ZCL_DATATYPE_UINT8
 #define ZCL_UINT16      ZCL_DATATYPE_UINT16
@@ -70,9 +80,16 @@ extern "C" {
 
 typedef enum {
     LED_ALWAYS, // Светодиод горит всегда
-    LED_NEVER,  // Светодиод горит всегда
-    LED_NIGHT,  // Светодиод горит всегда
+    LED_NEVER,  // Светодиод не горит никогда
+    LED_NIGHT,  // Светодиод включается при присутствии в ночное время
 } LedMode_t;
+
+typedef enum {
+    TARGET_NONE,        // Нет объекта
+    TARGET_MOVING,      // Объект движется
+    TARGET_STATIONARY,  // Объект неподвижен
+    TARGET_ST_AND_MOV   // Объект движется и неподвижен
+} TargetType_t;
 
 typedef struct {
     bool      SensorEnabled;
@@ -80,6 +97,7 @@ typedef struct {
     uint32    TimeLow;
     uint32    TimeHigh;
     LedMode_t LedMode;
+    uint16    MeasurementPeriod;
 } application_config_t;
 
 /*********************************************************************
@@ -106,8 +124,12 @@ extern const uint8 zclApp_PowerSource;
 extern bool    zclApp_Occupied; 
 extern uint16  zclApp_IlluminanceSensor_MeasuredValue;
 
-extern bool    zclApp_Output; 
-extern bool    zclApp_LedEnabled; 
+extern bool    zclApp_DayOutput; 
+extern bool    zclApp_NightOutput; 
+extern bool    zclApp_Led; 
+
+extern uint16  zclApp_Distance;
+extern TargetType_t zclApp_TargetType;
 
 extern application_config_t zclApp_Config;
 

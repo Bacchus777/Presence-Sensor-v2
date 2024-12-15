@@ -44,9 +44,12 @@ const uint16 zclApp_clusterRevision_all = 0x0002;
 
 bool    zclApp_Occupied = FALSE; 
 uint16  zclApp_IlluminanceSensor_MeasuredValue = 0;
-bool    zclApp_Output = FALSE;
+bool    zclApp_DayOutput = FALSE;
+bool    zclApp_NightOutput = FALSE;
 uint32  zclApp_GenTime_TimeUTC = 0;
-bool    zclApp_LedEnabled = FALSE;
+bool    zclApp_Led = FALSE;
+uint16  zclApp_Distance = 0;
+TargetType_t  zclApp_TargetType = TARGET_NONE;
 
 // Basic Cluster
 const uint8 zclApp_HWRevision = APP_HWVERSION;
@@ -55,23 +58,25 @@ const uint8 zclApp_ApplicationVersion = 3;
 const uint8 zclApp_StackVersion = 4;
 
 const uint8 zclApp_ManufacturerName[] = {7, 'B', 'a', 'c', 'c', 'h', 'u', 's'};
-const uint8 zclApp_ModelId[] = {18, 'P', 'r', 'e', 's', 'e', 'n', 'c', 'e', '_', 'S', 'e', 'n', 's', 'o', 'r', '_', 'v', '2'};
+const uint8 zclApp_ModelId[] = {20, 'P', 'r', 'e', 's', 'e', 'n', 'c', 'e', '_', 'S', 'e', 'n', 's', 'o', 'r', '_', 'v', '2', '.', '6'};
 const uint8 zclApp_PowerSource = POWER_SOURCE_MAINS_1_PHASE;
 
 
-#define DEFAULT_SensorEnabled   TRUE
-#define DEFAULT_Threshold       (uint16)25000
-#define DEFAULT_TimeLow         (uint32)28800
-#define DEFAULT_TimeHigh        (uint32)82800
-#define DEFAULT_LedMode         LED_ALWAYS
+#define DEFAULT_SensorEnabled       TRUE
+#define DEFAULT_Threshold           (uint16)25000
+#define DEFAULT_TimeLow             (uint32)28800
+#define DEFAULT_TimeHigh            (uint32)82800
+#define DEFAULT_LedMode             LED_ALWAYS
+#define DEFAULT_MeasurementPeriod   15
 
 
 application_config_t zclApp_Config = {
-    .SensorEnabled =  DEFAULT_SensorEnabled,
-    .Threshold =      DEFAULT_Threshold,
-    .TimeLow =        DEFAULT_TimeLow,
-    .TimeHigh =       DEFAULT_TimeHigh,
-    .LedMode =        DEFAULT_LedMode
+    .SensorEnabled =      DEFAULT_SensorEnabled,
+    .Threshold =          DEFAULT_Threshold,
+    .TimeLow =            DEFAULT_TimeLow,
+    .TimeHigh =           DEFAULT_TimeHigh,
+    .LedMode =            DEFAULT_LedMode,
+    .MeasurementPeriod =  DEFAULT_MeasurementPeriod,
 };
 
 
@@ -95,9 +100,12 @@ CONST zclAttrRec_t zclApp_AttrsFirstEP[] = {
     {GEN_ON_OFF, {ATTRID_CLUSTER_REVISION, ZCL_INT16, RW, (void *)&zclApp_clusterRevision_all}},
 
     {OCCUPANCY, {ATTRID_MS_OCCUPANCY_SENSING_CONFIG_OCCUPANCY, ZCL_BITMAP8, RR, (void *)&zclApp_Occupied}},
+    {OCCUPANCY, {ATTRID_MS_OCCUPANCY_TARGET_DISTANCE, ZCL_UINT16, RR, (void *)&zclApp_Distance}},
+    {OCCUPANCY, {ATTRID_MS_OCCUPANCY_TARGET_TYPE, ZCL_DATATYPE_ENUM8, RR, (void *)&zclApp_TargetType}},
+    {OCCUPANCY, {ATTRID_MS_DISTANCE_MEASUREMENT_PERIOD, ZCL_UINT16, RW, (void *)&zclApp_Config.MeasurementPeriod}},
     
     {ILLUMINANCE, {ATTRID_MS_ILLUMINANCE_MEASURED_VALUE, ZCL_UINT16, RR, (void *)&zclApp_IlluminanceSensor_MeasuredValue}},
-    {ILLUMINANCE_LVL, {ATTRID_MS_ILLUMINANCE_TARGET_LEVEL, ZCL_UINT16, RW, (void *)&zclApp_Config.Threshold}},
+    {ILLUMINANCE, {ATTRID_ILLUMINANCE_THRESHOLD, ZCL_UINT16, RW, (void *)&zclApp_Config.Threshold}},
 
     {GEN_TIME, {ATTRID_TIME_TIME, ZCL_UTC, RW, (void *)&zclApp_GenTime_TimeUTC}},
     {GEN_TIME, {ATTRID_TIME_LOCAL_TIME, ZCL_UINT32, RW, (void *)&zclApp_GenTime_TimeUTC}},
@@ -106,11 +114,11 @@ CONST zclAttrRec_t zclApp_AttrsFirstEP[] = {
 };
 
 CONST zclAttrRec_t zclApp_AttrsSecondEP[] = {
-    {GEN_ON_OFF, {ATTRID_ON_OFF, ZCL_BOOLEAN, RR, (void *)&zclApp_Output}},
+    {GEN_ON_OFF, {ATTRID_ON_OFF, ZCL_BOOLEAN, RR, (void *)&zclApp_DayOutput}},
 };
 
 CONST zclAttrRec_t zclApp_AttrsThirdEP[] = {
-    {GEN_ON_OFF, {ATTRID_ON_OFF, ZCL_BOOLEAN, RWR, (void *)&zclApp_LedEnabled}},
+    {GEN_ON_OFF, {ATTRID_ON_OFF, ZCL_BOOLEAN, RWR, (void *)&zclApp_NightOutput}},
     {GEN_ON_OFF, {ATTRID_LED_MODE, ZCL_DATATYPE_ENUM8, RW, (void *)&zclApp_Config.LedMode}},
 };
 
@@ -205,10 +213,11 @@ SimpleDescriptionFormat_t zclApp_ThirdEP = {
 
 
 void zclApp_ResetAttributesToDefaultValues(void) {
-    zclApp_Config.SensorEnabled = DEFAULT_SensorEnabled;
-    zclApp_Config.Threshold =     DEFAULT_Threshold;
-    zclApp_Config.TimeLow =       DEFAULT_TimeLow;
-    zclApp_Config.TimeHigh =      DEFAULT_TimeHigh;
-    zclApp_Config.LedMode =       DEFAULT_LedMode;
+    zclApp_Config.SensorEnabled =     DEFAULT_SensorEnabled;
+    zclApp_Config.Threshold =         DEFAULT_Threshold;
+    zclApp_Config.TimeLow =           DEFAULT_TimeLow;
+    zclApp_Config.TimeHigh =          DEFAULT_TimeHigh;
+    zclApp_Config.LedMode =           DEFAULT_LedMode;
+    zclApp_Config.MeasurementPeriod = DEFAULT_MeasurementPeriod;
 }
 

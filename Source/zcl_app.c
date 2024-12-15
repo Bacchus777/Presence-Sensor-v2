@@ -37,6 +37,7 @@
 #include "version.h"
 
 #include <stdint.h>
+#include <string.h>
 /*********************************************************************
  * MACROS
  */
@@ -44,6 +45,17 @@
 /*********************************************************************
  * CONSTANTS
  */
+
+#define RESPONSE_LENGHT     66
+#define HLK_RESPONSE_LENGHT 44
+
+
+uint8 startConfig[14] = {0xFD, 0xFC, 0xFB, 0xFA, 0x04, 0x00, 0xFF, 0x00, 0x01, 0x00, 0x04, 0x03, 0x02, 0x01};
+uint8 stopConfig[12]  = {0xFD, 0xFC, 0xFB, 0xFA, 0x02, 0x00, 0xFE, 0x00, 0x04, 0x03, 0x02, 0x01};
+uint8 startBits[4]    = {0xF4, 0xF3, 0xF2, 0xF1};
+uint8 endBits[4]      = {0xF8, 0xF7, 0xF6, 0xF5};
+uint8 engMode[12]     = {0xFD, 0xFC, 0xFB, 0xFA, 0x02, 0x00, 0x62, 0x00, 0x04, 0x03, 0x02, 0x01};
+uint8 engModeOff[12]  = {0xFD, 0xFC, 0xFB, 0xFA, 0x02, 0x00, 0x63, 0x00, 0x04, 0x03, 0x02, 0x01};
 
 /*********************************************************************
  * TYPEDEFS
@@ -62,6 +74,8 @@ uint8 SeqNum = 0;
 
 uint32 zclApp_GenTime_old = 0;
 
+bool readHLK = FALSE;
+
 /*********************************************************************
  * GLOBAL FUNCTIONS
  */
@@ -78,13 +92,18 @@ static uint8 currentSensorsReadingPhase = 0;
 /*********************************************************************
  * LOCAL FUNCTIONS
  */
+int8 findSubstring(uint8 *array, uint8 arraySize, uint8 *sequence, uint8 sequenceSize, uint8 start);
 
-static void zclApp_SetOutput(void);
+
+static void zclApp_SetDayOutput(void);
 static void zclApp_ReadSensors(void);
 static void zclApp_Report(void);
-static void zclApp_SetOutput(void);
-static void zclApp_SetLed(void);
+static void zclApp_SetNightOutput(void);
 static bool zclApp_in_time(void);
+static void EnableEngMode(void);
+
+static void zclApp_InitHLKUart(void);
+static void SerialApp_CallBack(uint8 port, uint8 event);   // Receive data will trigger
 
 static void zclApp_BasicResetCB(void);
 static void zclApp_RestoreAttributesFromNV(void);
@@ -96,8 +115,8 @@ static void zclApp_reqLocalTime(void);
 static uint8 zclApp_ProcessInReadRspCmd(zclIncomingMsg_t *pInMsg);
 
 
-// Измерение освещенности
-static void zclApp_ReadIlluminance(void);
+// Запуск чтения датчика
+static void zclApp_ReadHLK(void);
 // Изменение включения датчика
 static void updateSensor( bool );
 // Изменение включения диода
@@ -133,7 +152,7 @@ static zclGeneral_AppCallbacks_t zclApp_CmdCallbacks1EP = {
 void zclApp_Init(byte task_id) {
   IO_IMODE_PORT_PIN(LUMOISITY_PORT, LUMOISITY_PIN, IO_TRI);         // tri state p0.7 (lumosity pin)
 
-  HalLedSet(HAL_LED_ALL, HAL_LED_MODE_BLINK);
+  HalLedSet(HAL_LED_1, HAL_LED_MODE_BLINK);
 
   zclApp_RestoreAttributesFromNV();
 
@@ -154,6 +173,7 @@ void zclApp_Init(byte task_id) {
   zcl_registerAttrList(zclApp_ThirdEP.EndPoint, zclApp_AttrsThirdEPCount, zclApp_AttrsThirdEP);
 
   zcl_registerReadWriteCB(zclApp_FirstEP.EndPoint, NULL, zclApp_ReadWriteAuthCB);
+  zcl_registerReadWriteCB(zclApp_ThirdEP.EndPoint, NULL, zclApp_ReadWriteAuthCB);
 
   zcl_registerForMsg(zclApp_TaskID);
   RegisterForKeys(zclApp_TaskID);
@@ -165,8 +185,115 @@ void zclApp_Init(byte task_id) {
   
   LREP("START APP_REPORT_CLOCK_EVT\r\n");
   
+  zclApp_InitHLKUart();
 }
 
+int8 findSubstring(uint8 *array, uint8 arraySize, uint8 *sequence, uint8 sequenceSize, uint8 start) 
+{
+  if (start > (arraySize - sequenceSize)) 
+    return -1;
+  
+  bool match = true;
+  for (int i = start; i < (arraySize - sequenceSize); i++) 
+  {
+    match = true;
+    for (uint8 j = 0; j < sequenceSize; j++){
+      match = match & (array[i + j] == sequence[j]);
+    }
+      
+
+    if (match)
+    {
+      LREP("match %d \r\n", i);
+      return i;
+    }
+
+  }
+
+  LREPMaster("not match \r\n");
+  return -1;
+}
+
+void SerialApp_CallBack(uint8 port, uint8 event)   // Receive data will trigger
+{
+  if (readHLK)
+  {
+    uint8 response[RESPONSE_LENGHT] = {0x00};
+    HalUARTRead(HLK_PORT, (uint8 *)&response, sizeof(response) / sizeof(response[0]));
+
+      LREPMaster("CALLBACK UART \r\n");
+      for (int i = 0; i <= (RESPONSE_LENGHT - 1); i++) 
+      {
+        LREP("0x%X ", response[i]);
+      }
+      LREP("\r\n");
+    
+    int8 startBit = findSubstring(response, RESPONSE_LENGHT, startBits, 4, 0);
+
+    LREP("startBit = %d\r\n", startBit);
+    
+    if (startBit >= 0) {
+      int8 endBit = findSubstring(response, RESPONSE_LENGHT, endBits, 4, startBit);
+      
+      if (endBit > startBit) {
+        if (response[4 + startBit] == 0x23) {
+
+          zclApp_Distance = (uint16)(response[16 + startBit] * 0x100) + (uint16)response[15 + startBit];
+          LREP("zclApp_Distance = %d\r\n", zclApp_Distance);
+
+          zclApp_IlluminanceSensor_MeasuredValue = (uint32)((response[37 + startBit]) * 155);
+          
+          switch (response[8 + startBit]) {
+          case 0x00: 
+            zclApp_TargetType = TARGET_NONE;
+            break;
+          case 0x01: 
+            zclApp_TargetType = TARGET_MOVING;
+            break;
+          case 0x02: 
+            zclApp_TargetType = TARGET_STATIONARY;
+            break;
+          case 0x03: 
+            zclApp_TargetType = TARGET_ST_AND_MOV;
+            break;
+          }
+
+          bdb_RepChangedAttrValue(zclApp_FirstEP.EndPoint, ILLUMINANCE, ATTRID_MS_ILLUMINANCE_MEASURED_VALUE);
+              
+          updateOccupancy(zclApp_Occupied);
+          
+          readHLK = FALSE;
+        }
+        else 
+          EnableEngMode(); 
+      }
+    }
+  }
+}
+
+static void zclApp_InitHLKUart(void) {
+  halUARTCfg_t halUARTConfig;
+  halUARTConfig.configured = TRUE;
+  halUARTConfig.baudRate = HAL_UART_BR_115200;
+  halUARTConfig.flowControl = FALSE;
+  halUARTConfig.flowControlThreshold = 64; // this parameter indicates number of bytes left before Rx Buffer
+                                           // reaches maxRxBufSize
+  halUARTConfig.idleTimeout = 10;          // this parameter indicates rx timeout period in millisecond
+  halUARTConfig.rx.maxBufSize = 128;
+  halUARTConfig.tx.maxBufSize = 128;
+  halUARTConfig.intEnable = TRUE;
+  halUARTConfig.callBackFunc = SerialApp_CallBack;
+  HalUARTInit();
+  if (HalUARTOpen(HLK_PORT, &halUARTConfig) == HAL_UART_SUCCESS) {
+    LREPMaster("Initialized HLK UART \r\n");
+  }
+}
+
+static void zclApp_ReadHLK(void) {
+  LREPMaster("Read HLK \r\n");
+
+  readHLK = TRUE;
+}
 
 uint16 zclApp_event_loop(uint8 task_id, uint16 events) {
     LREP("events 0x%x \r\n", events);
@@ -217,20 +344,45 @@ uint16 zclApp_event_loop(uint8 task_id, uint16 events) {
       zclApp_reqLocalTime();      
       return (events ^ APP_REQ_TIME_EVT);
     }
+    if (events & APP_GET_DISTANCE_EVT) {
+      LREPMaster("APP_GET_DISTANCE_EVT\r\n");
+      zclApp_ReadHLK();
+      return (events ^ APP_GET_DISTANCE_EVT);
+    }
     return 0;
 }
 
 // обработка выхода с датчика
 static void zclApp_HandleKeys(byte portAndAction, byte keyCode) {
   LREP("zclApp_HandleKeys portAndAction=0x%X keyCode=0x%X\r\n", portAndAction, keyCode);
-  if (portAndAction & HAL_KEY_PRESS) {
-    updateOccupancy(TRUE);
-    osal_start_timerEx(zclApp_TaskID, APP_REPORT_EVT, 200);
-  }
-  if (portAndAction & HAL_KEY_RELEASE) {
-    updateOccupancy(FALSE);
-    osal_start_timerEx(zclApp_TaskID, APP_REPORT_EVT, 200);
-  }
+  LREP("HAL_KEY_PORT0 = 0x%X\r\n", HAL_KEY_PORT0);
+
+#if APP_COMMISSIONING_BY_LONG_PRESS
+    if (bdbAttributes.bdbNodeIsOnANetwork == 1) {
+      zclFactoryResetter_HandleKeys(portAndAction, keyCode);
+    }
+#else
+    zclFactoryResetter_HandleKeys(portAndAction, keyCode);
+#endif
+    zclCommissioning_HandleKeys(portAndAction, keyCode);
+
+    if (portAndAction & HAL_KEY_PORT0) {
+
+      if (portAndAction & HAL_KEY_PRESS) {
+        LREPMaster("OCCUPIED\r\n");
+        updateOccupancy(TRUE);
+        zclApp_ReadHLK();
+        osal_start_timerEx(zclApp_TaskID, APP_REPORT_EVT, 200);
+        if (zclApp_Config.MeasurementPeriod > 0)
+          osal_start_reload_timer(zclApp_TaskID, APP_GET_DISTANCE_EVT, zclApp_Config.MeasurementPeriod * 1000);
+      }
+      if (portAndAction & HAL_KEY_RELEASE) {
+        updateOccupancy(FALSE);
+        osal_start_timerEx(zclApp_TaskID, APP_REPORT_EVT, 200);
+        osal_stop_timerEx(zclApp_TaskID, APP_GET_DISTANCE_EVT);
+        osal_clear_event(zclApp_TaskID, APP_GET_DISTANCE_EVT);
+      }
+    }
 }
 
 static void zclApp_Report(void) {
@@ -244,15 +396,15 @@ static void zclApp_ReadSensors(void) {
   switch (currentSensorsReadingPhase++) {
   case 0:
     LREPMaster("zclApp_ReadIlluminance\r\n");
-    zclApp_ReadIlluminance();
+    zclApp_ReadHLK();
     break;
   case 1:
-    LREPMaster("zclApp_SetOutput\r\n");
-    zclApp_SetOutput();
+    LREPMaster("zclApp_SetDayOutput\r\n");
+    zclApp_SetDayOutput();
     break;
   case 2:
-    LREPMaster("zclApp_SetLed\r\n");
-    zclApp_SetLed();
+    LREPMaster("zclApp_SetNightOutput\r\n");
+    zclApp_SetNightOutput();
     break;
   case 3:
     LREPMaster("zclApp_UpdateClock\r\n");
@@ -265,13 +417,6 @@ static void zclApp_ReadSensors(void) {
     currentSensorsReadingPhase = 0;
     break;
   }
-
-  LREP("currentSensorsReadingPhase %d\r\n", currentSensorsReadingPhase);
-
-  if (currentSensorsReadingPhase != 0) {
-      osal_start_timerEx(zclApp_TaskID, APP_READ_SENSORS_EVT, 10);
-  }
-
 }
 
 // Изменение состояния датчика
@@ -292,7 +437,7 @@ void updateSensor ( bool value )
 // Изменение состояния диода
 void updateLed ( bool value )
 {
-  zclApp_LedEnabled = value;
+  zclApp_Led = value;
 
   // Меняем  диод
   applyLed();
@@ -302,7 +447,11 @@ void updateLed ( bool value )
 void updateOccupancy ( bool value )
 {
   zclApp_Occupied = (value & zclApp_Config.SensorEnabled);
-                     
+     
+  if (!zclApp_Occupied) {
+    zclApp_Distance = 0;
+    zclApp_TargetType = TARGET_NONE;
+  }
   LREP("value=%d\r\n", zclApp_Occupied);
 
   bdb_RepChangedAttrValue(zclApp_FirstEP.EndPoint, OCCUPANCY , ATTRID_MS_OCCUPANCY_SENSING_CONFIG_OCCUPANCY);
@@ -318,10 +467,12 @@ void applySensor ( void )
 {
   // если выключено
   if (zclApp_Config.SensorEnabled) {
-    // иначе включаем светодиод 2
+    // включаем светодиод 2
     HalLedSet ( HAL_LED_2, HAL_LED_MODE_ON );
+    LREPMaster("ENABLE SENSOR\r\n");
+//    osal_start_reload_timer(zclApp_TaskID, APP_ENABLE_ENG_EVT, 10000);
   } else {
-    // то гасим светодиод 2
+    // гасим светодиод 2
     HalLedSet ( HAL_LED_2, HAL_LED_MODE_OFF );
   }
 }
@@ -330,7 +481,7 @@ void applySensor ( void )
 void applyLed ( void )
 {
   // если выключено
-  if (zclApp_LedEnabled) {
+  if (zclApp_Led) {
     // иначе включаем светодиод 1
     HalLedSet ( HAL_LED_1, HAL_LED_MODE_ON );
   } else {
@@ -339,14 +490,6 @@ void applyLed ( void )
   }
 }
 
-
-static void zclApp_ReadIlluminance(void) {
-  HalLedSet(HAL_LED_4, HAL_LED_MODE_ON); 
-  zclApp_IlluminanceSensor_MeasuredValue = adcReadSampled(LUMOISITY_PIN, HAL_ADC_RESOLUTION_14, HAL_ADC_REF_AVDD, 5) * 5;
-  HalLedSet(HAL_LED_4, HAL_LED_MODE_OFF);
-  
-  bdb_RepChangedAttrValue(zclApp_FirstEP.EndPoint, ILLUMINANCE, ATTRID_MS_ILLUMINANCE_MEASURED_VALUE);
-}
 
 static bool zclApp_in_time(void){
 
@@ -364,7 +507,7 @@ static bool zclApp_in_time(void){
   }
 }
 
-static void zclApp_SetOutput(void) {
+static void zclApp_SetDayOutput(void) {
   bool in_time = zclApp_in_time();
   
   bool in_illuminance = (zclApp_IlluminanceSensor_MeasuredValue <= zclApp_Config.Threshold);
@@ -375,14 +518,14 @@ static void zclApp_SetOutput(void) {
   LREP("led_mode=%d\r\n", zclApp_Config.LedMode);
 
   if (zclApp_Occupied) {
-    zclApp_Output = (zclApp_Output | (in_illuminance & in_time));
+    zclApp_DayOutput = (zclApp_DayOutput | (in_illuminance & in_time));
   } else {
-    zclApp_Output = FALSE;
+    zclApp_DayOutput = FALSE;
   }
 
   bdb_RepChangedAttrValue(zclApp_SecondEP.EndPoint, GEN_ON_OFF, ATTRID_ON_OFF);
 
-  if (zclApp_Output == 1)
+  if (zclApp_DayOutput)
     zclGeneral_SendOnOff_CmdOn(zclApp_SecondEP.EndPoint, &inderect_DstAddr, TRUE, bdb_getZCLFrameCounter());
   else{
     
@@ -391,25 +534,33 @@ static void zclApp_SetOutput(void) {
   }
 }
 
-static void zclApp_SetLed(void) {
+static void zclApp_SetNightOutput(void) {
 
   bool in_time = zclApp_in_time();
 
-  if (zclApp_Config.LedMode == LED_ALWAYS) {
-    zclApp_LedEnabled = TRUE;
-  }
-  else if (zclApp_Config.LedMode == LED_NEVER) {
-    zclApp_LedEnabled = FALSE;
-  }
-  else if (zclApp_Config.LedMode == LED_NIGHT) {
-    zclApp_LedEnabled = (zclApp_Occupied & !in_time);
+  zclApp_NightOutput = (zclApp_Occupied & !in_time);
+  
+  switch (zclApp_Config.LedMode) {
+    case LED_ALWAYS:
+      zclApp_Led = TRUE;
+      break;
+    case LED_NEVER:
+      zclApp_Led = FALSE;
+      break;
+    case LED_NIGHT:
+      zclApp_Led = (zclApp_Occupied & !in_time);
+      break;
+    default:
+      break;
   }
 
-  updateLed(zclApp_LedEnabled);
+  LREP("zclApp_Led = %d\r\n", zclApp_Led);
+
+  updateLed(zclApp_Led);
 
   bdb_RepChangedAttrValue(zclApp_ThirdEP.EndPoint, GEN_ON_OFF, ATTRID_ON_OFF);
 
-  if (zclApp_LedEnabled)
+  if (zclApp_NightOutput)
     zclGeneral_SendOnOff_CmdOn(zclApp_ThirdEP.EndPoint, &inderect_DstAddr, TRUE, bdb_getZCLFrameCounter());
   else {
     zclGeneral_SendOnOff_CmdOff(zclApp_ThirdEP.EndPoint, &inderect_DstAddr, TRUE, bdb_getZCLFrameCounter());
@@ -448,7 +599,7 @@ static void zclApp_BasicResetCB(void) {
 
 static ZStatus_t zclApp_ReadWriteAuthCB(afAddrType_t *srcAddr, zclAttrRec_t *pAttr, uint8 oper) {
   LREPMaster("AUTH CB called\r\n");
-  osal_start_timerEx(zclApp_TaskID, APP_SAVE_ATTRS_EVT, 2000);
+  osal_start_timerEx(zclApp_TaskID, APP_SAVE_ATTRS_EVT, 200);
   return ZSuccess;
 }
 
@@ -457,10 +608,42 @@ static void zclApp_SaveAttributesToNV(void) {
   LREP("Saving attributes to NV write=%d\r\n", writeStatus);
   LREP("Delta  = %ld\r\n", zclApp_GenTime_TimeUTC - zclApp_GenTime_old);
   LREP("Delta clock = %ld\r\n", zclApp_GenTime_TimeUTC - osal_getClock());
+
+  bool in_time = zclApp_in_time();
+
+  LREP("LedMode = %d\r\n", zclApp_Config.LedMode);
+  
+  switch (zclApp_Config.LedMode) {
+    case LED_ALWAYS:
+      zclApp_Led = TRUE;
+      break;
+    case LED_NEVER:
+      zclApp_Led = FALSE;
+      break;
+    case LED_NIGHT:
+      zclApp_Led = (zclApp_Occupied & !in_time);
+      break;
+    default:
+      break;
+  }
+
+  LREP("zclApp_Led = %d\r\n", zclApp_Led);
+
+  updateLed(zclApp_Led);
+
+  
   if (zclApp_GenTime_TimeUTC != zclApp_GenTime_old) {
     LREPMaster("CHANGE\r\n");
     zclApp_GenTime_old = zclApp_GenTime_TimeUTC;    
     osal_setClock(zclApp_GenTime_TimeUTC + 2);    
+  }
+
+  if ((zclApp_Config.MeasurementPeriod > 0) & zclApp_Occupied) 
+    osal_start_reload_timer(zclApp_TaskID, APP_GET_DISTANCE_EVT, zclApp_Config.MeasurementPeriod * 1000);
+
+  if (zclApp_Config.MeasurementPeriod == 0){
+    osal_stop_timerEx(zclApp_TaskID, APP_GET_DISTANCE_EVT);
+    osal_clear_event(zclApp_TaskID, APP_GET_DISTANCE_EVT);
   }
 }
 
@@ -522,4 +705,15 @@ static uint8 zclApp_ProcessInReadRspCmd(zclIncomingMsg_t *pInMsg)
   break;
   }
   return TRUE;
+}
+
+static void EnableEngMode(void)
+{
+  HalUARTWrite(HLK_PORT, startConfig, sizeof(startConfig) / sizeof(startConfig[0])); 
+  user_delay_ms(200);
+  HalUARTWrite(HLK_PORT, engMode, sizeof(engMode) / sizeof(engMode[0])); 
+  user_delay_ms(200);
+  HalUARTWrite(HLK_PORT, stopConfig, sizeof(stopConfig) / sizeof(stopConfig[0])); 
+//  osal_stop_timerEx(zclApp_TaskID, APP_ENABLE_ENG_EVT);
+//  osal_clear_event(zclApp_TaskID, APP_ENABLE_ENG_EVT);
 }
