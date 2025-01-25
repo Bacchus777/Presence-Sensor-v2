@@ -33,12 +33,20 @@ const str_min_to_time = (str_min) => {
 const fz_local = {
     illuminance_config: {
         cluster: 'msIlluminanceLevelSensing',
-        type: ['attributeReport', 'readResponse'],
+        type: ['readResponse'],
         convert: (model, msg, publish, options, meta) => {
             const result = {};
             if (msg.data.hasOwnProperty(0x10)) {
                 result.illuminance_threshold = msg.data[0x10];
             }
+            return result;
+        },
+    },
+    illuminance_raw: {
+        cluster: 'msIlluminanceMeasurement',
+        type: ['attributeReport'],
+        convert: (model, msg, publish, options, meta) => {
+            const result = {};
             if (msg.data.hasOwnProperty('measuredValue')) {
                 result.illuminance_for_threshold = msg.data['measuredValue'];
             }
@@ -174,6 +182,7 @@ const device = {
 	fromZigbee: [	fz.on_off, 
 					fz.occupancy, 
 					fz.illuminance,
+					fz_local.illuminance_raw,
                     fz_local.illuminance_config,
                     fz_local.time_config,
                     fz_local.local_time,
@@ -211,7 +220,7 @@ const device = {
 	exposes: [
 			e.switch().withEndpoint('l1'),
 			e.occupancy(), 
-			e.numeric('illuminance_for_threshold', ACCESS_STATE).withDescription('Measured illuminance for threshold'),
+			e.numeric('illuminance_for_threshold', ACCESS_STATE).withValueMin(0).withValueMax(10000).withDescription('Measured illuminance for threshold'),
 			e.illuminance(), 
 			e.numeric('illuminance_threshold', ACCESS_STATE | ACCESS_WRITE | ACCESS_READ).withValueMin(0).withValueMax(10000).withDescription('Минимальная освещенность срабатывания').withEndpoint('l1'),
             e.text('local_time', ACCESS_STATE | ACCESS_READ).withDescription('Текущее время'),
