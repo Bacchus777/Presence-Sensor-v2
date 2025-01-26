@@ -46,7 +46,7 @@ bool    zclApp_Occupied = FALSE;
 uint16  zclApp_IlluminanceSensor_MeasuredValue = 0;
 bool    zclApp_DayOutput = FALSE;
 bool    zclApp_NightOutput = FALSE;
-uint32  zclApp_GenTime_TimeUTC = 0;
+uint32  zclApp_GenTime_LocalTime = 0;
 bool    zclApp_Led = FALSE;
 uint16  zclApp_Distance = 0;
 TargetType_t  zclApp_TargetType = TARGET_NONE;
@@ -107,8 +107,7 @@ CONST zclAttrRec_t zclApp_AttrsFirstEP[] = {
     {ILLUMINANCE, {ATTRID_MS_ILLUMINANCE_MEASURED_VALUE, ZCL_UINT16, RR, (void *)&zclApp_IlluminanceSensor_MeasuredValue}},
     {ILLUMINANCE, {ATTRID_ILLUMINANCE_THRESHOLD, ZCL_UINT16, RW, (void *)&zclApp_Config.Threshold}},
 
-    {GEN_TIME, {ATTRID_TIME_TIME, ZCL_UTC, RW, (void *)&zclApp_GenTime_TimeUTC}},
-    {GEN_TIME, {ATTRID_TIME_LOCAL_TIME, ZCL_UINT32, RW, (void *)&zclApp_GenTime_TimeUTC}},
+    {GEN_TIME, {ATTRID_TIME_LOCAL_TIME, ZCL_UINT32, RW, (void *)&zclApp_GenTime_LocalTime}},
     {GEN_TIME, {ATTRID_TIME_DST_START, ZCL_UINT32, RW, (void *)&zclApp_Config.TimeLow}},
     {GEN_TIME, {ATTRID_TIME_DST_END, ZCL_UINT32, RW, (void *)&zclApp_Config.TimeHigh}}
 };

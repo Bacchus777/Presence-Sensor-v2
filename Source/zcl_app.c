@@ -606,8 +606,8 @@ static ZStatus_t zclApp_ReadWriteAuthCB(afAddrType_t *srcAddr, zclAttrRec_t *pAt
 static void zclApp_SaveAttributesToNV(void) {
   uint8 writeStatus = osal_nv_write(NW_APP_CONFIG, 0, sizeof(application_config_t), &zclApp_Config);
   LREP("Saving attributes to NV write=%d\r\n", writeStatus);
-  LREP("Delta  = %ld\r\n", zclApp_GenTime_TimeUTC - zclApp_GenTime_old);
-  LREP("Delta clock = %ld\r\n", zclApp_GenTime_TimeUTC - osal_getClock());
+  LREP("Delta  = %ld\r\n", zclApp_GenTime_LocalTime - zclApp_GenTime_old);
+  LREP("Delta clock = %ld\r\n", zclApp_GenTime_LocalTime - osal_getClock());
 
   bool in_time = zclApp_in_time();
 
@@ -632,10 +632,10 @@ static void zclApp_SaveAttributesToNV(void) {
   updateLed(zclApp_Led);
 
   
-  if (zclApp_GenTime_TimeUTC != zclApp_GenTime_old) {
+  if (zclApp_GenTime_LocalTime != zclApp_GenTime_old) {
     LREPMaster("CHANGE\r\n");
-    zclApp_GenTime_old = zclApp_GenTime_TimeUTC;    
-    osal_setClock(zclApp_GenTime_TimeUTC + 2);    
+    zclApp_GenTime_old = zclApp_GenTime_LocalTime;    
+    osal_setClock(zclApp_GenTime_LocalTime + 2);    
   }
 
   if ((zclApp_Config.MeasurementPeriod > 0) & zclApp_Occupied) 
@@ -668,12 +668,12 @@ static void zclApp_RestoreAttributesFromNV(void) {
 void zclApp_UpdateClock(void)
 {
   osalTimeUpdate();
-  zclApp_GenTime_TimeUTC = osal_getClock();
+  zclApp_GenTime_LocalTime = osal_getClock();
   
-  zclApp_GenTime_TimeUTC %= DAY;
+  zclApp_GenTime_LocalTime %= DAY;
  
   LREP("CLOCK = %ld\r\n", osal_getClock());
-  LREP("TIME = %ld\r\n", zclApp_GenTime_TimeUTC);
+  LREP("TIME = %ld\r\n", zclApp_GenTime_LocalTime);
   LREP("TIME_LOW = %ld\r\n", zclApp_Config.TimeLow);
   LREP("TIME_HIGH = %ld\r\n", zclApp_Config.TimeHigh);
 }
@@ -694,11 +694,11 @@ static uint8 zclApp_ProcessInReadRspCmd(zclIncomingMsg_t *pInMsg)
   {
   case GEN_TIME:
     {
-      LREP("TIME = %ld\r\n", zclApp_GenTime_TimeUTC);
-      zclApp_GenTime_TimeUTC = * ((uint32 *) readRspCmd->attrList[0].data);
-      zclApp_GenTime_TimeUTC %= DAY;
-      LREP("TIME = %ld\r\n", zclApp_GenTime_TimeUTC);
-      osal_setClock(zclApp_GenTime_TimeUTC);
+      LREP("TIME = %ld\r\n", zclApp_GenTime_LocalTime);
+      zclApp_GenTime_LocalTime = * ((uint32 *) readRspCmd->attrList[0].data);
+      zclApp_GenTime_LocalTime %= DAY;
+      LREP("TIME = %ld\r\n", zclApp_GenTime_LocalTime);
+      osal_setClock(zclApp_GenTime_LocalTime);
 
       osal_start_reload_timer(zclApp_TaskID, APP_REQ_TIME_EVT, REQ_TIME_INTERVAL);
     }

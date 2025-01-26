@@ -72,7 +72,6 @@ extern "C" {
 #define ZCL_SINGLE      ZCL_DATATYPE_SINGLE_PREC
 #define ZCL_BITMAP8     ZCL_DATATYPE_BITMAP8
 #define ZCL_BOOLEAN     ZCL_DATATYPE_BOOLEAN
-#define ZCL_UTC         ZCL_DATATYPE_UTC
 
 /*********************************************************************
  * TYPEDEFS
@@ -133,7 +132,7 @@ extern TargetType_t zclApp_TargetType;
 
 extern application_config_t zclApp_Config;
 
-extern uint32 zclApp_GenTime_TimeUTC;
+extern uint32 zclApp_GenTime_LocalTime;
 
 // APP_TODO: Declare application specific attributes here
 
