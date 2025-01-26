@@ -78,11 +78,14 @@ const fz_local = {
     },
     illuminance_config: {
         cluster: 'msIlluminanceMeasurement',
-        type: ['readResponse'],
+        type: ['attributeReport', 'readResponse'],
         convert: (model, msg, publish, options, meta) => {
             const result = {};
             if (msg.data.hasOwnProperty(0xF001)) {
                 result.illuminance_threshold = msg.data[0xF001];
+            }
+            if (msg.data.hasOwnProperty('measuredValue')) {
+                result.illuminance_for_threshold = msg.data['measuredValue'];
             }
             return result;
         },
@@ -313,8 +316,8 @@ const device = {
 
 	exposes: [
 			e.occupancy(), 
+			e.numeric('illuminance_for_threshold', ACCESS_STATE).withDescription('Measured illuminance for threshold'),
 			e.illuminance(), 
-			e.illuminance_lux(), 
 			e.numeric('illuminance_threshold', ACCESS_STATE | ACCESS_WRITE | ACCESS_READ).withValueMin(0).withValueMax(50000).withDescription('Illuminance threshold'),
             e.text('local_time', ACCESS_STATE | ACCESS_READ).withDescription('Current time'),
 			e.text('min_time', ACCESS_STATE | ACCESS_WRITE | ACCESS_READ).withDescription('Day start'),
