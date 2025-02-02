@@ -30,26 +30,64 @@ const str_min_to_time = (str_min) => {
     return result;
 };
 
+function EndpointByKey(key) {
+    let endpoint = 0;
+    switch (key) {
+        case 'sensor': 
+            endpoint = 1;
+            break;
+        case 'day_output': 
+            endpoint = 2;
+            break;
+        case 'night_output': 
+            endpoint = 3;
+        break;
+        default: 
+            break;
+    }
+    return endpoint;
+}
+
 const fz_local = {
-    illuminance_config: {
-        cluster: 'msIlluminanceLevelSensing',
-        type: ['readResponse'],
+    ps_on_off: {
+        cluster: 'genOnOff',
+        type: ['attributeReport', 'readResponse'],
         convert: (model, msg, publish, options, meta) => {
             const result = {};
-            if (msg.data.hasOwnProperty(0x10)) {
-                result.illuminance_threshold = msg.data[0x10];
+            const endpoint = msg.endpoint.ID;
+            let property = '';
+            switch (endpoint) {
+                case 1: 
+                    property = 'sensor';
+                    break;
+                case 2: 
+                    property = 'day_output';
+                    break;
+                case 3: 
+                    property = 'night_output';
+                    break;
+                default: 
+                    break;
             }
+            const state = msg.data['onOff'] === 1 ? 'ON' : 'OFF';
+            result[property] = state;
             return result;
         },
     },
-    illuminance_raw: {
+    illuminance_config: {
         cluster: 'msIlluminanceMeasurement',
-        type: ['attributeReport'],
+        type: ['attributeReport', 'readResponse'],
         convert: (model, msg, publish, options, meta) => {
             const result = {};
-            if (msg.data.hasOwnProperty('measuredValue')) {
-                result.illuminance_for_threshold = msg.data['measuredValue'];
+            if (msg.data.hasOwnProperty(0xF001)) {
+                result.illuminance_threshold = msg.data[0xF001];
             }
+            if (msg.data.hasOwnProperty('measuredValue')) {
+                const illuminance_raw = msg.data['measuredValue'];
+                const illuminance = illuminance_raw === 0 ? 0 : Math.pow(10, (illuminance_raw - 1) / 10000);
+                result.illuminance = illuminance;
+                result.illuminance_raw = illuminance_raw;
+                }
             return result;
         },
     },
@@ -90,6 +128,18 @@ const fz_local = {
 };
 
 const tz_local = {
+    ps_on_off:{
+        key: ['sensor', 'day_output', 'night_output'],
+        convertSet: async (entity, key, value, meta) => {
+            const state = utils.isString(meta.message[key]) ? meta.message[key].toLowerCase() : null;
+            utils.validateValue(state, ['toggle', 'off', 'on']);
+            
+            await meta.device.getEndpoint(EndpointByKey(key)).command('genOnOff', state, {}, utils.getOptions(meta.mapped, entity));
+        },
+        convertGet: async (entity, key, meta) => {
+            await meta.device.getEndpoint(EndpointByKey(key)).read('genOnOff', ['onOff']);
+        },
+    },
     illuminance_config: {
         key: ['illuminance_threshold'],
         convertSet: async (entity, key, value, meta) => {
@@ -179,16 +229,14 @@ const device = {
 	vendor: 'Bacchus',
     description: 'Bacchus presence sensor with illuminance',
 	supports: 'on/off, occupancy, illuminance', 
-	fromZigbee: [	fz.on_off, 
+	fromZigbee: [	fz_local.ps_on_off, 
 					fz.occupancy, 
-					fz.illuminance,
-					fz_local.illuminance_raw,
                     fz_local.illuminance_config,
                     fz_local.time_config,
                     fz_local.local_time,
                     fz_local.led_config,
     ],
-	toZigbee: [tz.on_off,
+	toZigbee: [tz_local.ps_on_off,
                tz_local.illuminance_config,
                tz_local.time_config,
                tz_local.local_time,
@@ -218,16 +266,16 @@ const device = {
         },
 
 	exposes: [
-			e.switch().withEndpoint('l1'),
 			e.occupancy(), 
-			e.numeric('illuminance_for_threshold', ACCESS_STATE).withValueMin(0).withValueMax(10000).withDescription('Measured illuminance for threshold'),
-			e.illuminance(), 
+			e.numeric('illuminance_raw', ACCESS_STATE).withDescription('Measured illuminance for threshold'),
+			e.numeric('illuminance', ACCESS_STATE).withDescription('Measured illuminance in lux').withUnit('lx'),
 			e.numeric('illuminance_threshold', ACCESS_STATE | ACCESS_WRITE | ACCESS_READ).withValueMin(0).withValueMax(10000).withDescription('Минимальная освещенность срабатывания').withEndpoint('l1'),
             e.text('local_time', ACCESS_STATE | ACCESS_READ).withDescription('Текущее время'),
 			e.text('min_time', ACCESS_STATE | ACCESS_WRITE | ACCESS_READ).withDescription('Начало дня'),
 			e.text('max_time', ACCESS_STATE | ACCESS_WRITE | ACCESS_READ).withDescription('Конец дня'),
-            e.switch().setAccess('state', ACCESS_STATE | ACCESS_READ).withEndpoint('l2'),
-			e.switch().setAccess('state', ACCESS_STATE | ACCESS_READ).withEndpoint('l3'),
+            e.binary('sensor', ea.ALL, 'ON', 'OFF').withDescription('Enable sensor'),
+            e.binary('day_output', ACCESS_STATE | ACCESS_READ, 'ON', 'OFF').withDescription('Day binding output'),
+            e.binary('night_output', ACCESS_STATE | ACCESS_READ, 'ON', 'OFF').withDescription('Night binding output'),
             e.enum('led_mode', ea.ALL, ['Always', 'Never', 'Night']).withDescription('Режим работы светодиода'),
 			],
 	endpoint: (device) => {
