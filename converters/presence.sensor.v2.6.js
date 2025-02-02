@@ -78,12 +78,18 @@ const fz_local = {
     },
     illuminance_config: {
         cluster: 'msIlluminanceMeasurement',
-        type: ['readResponse'],
+        type: ['attributeReport', 'readResponse'],
         convert: (model, msg, publish, options, meta) => {
             const result = {};
             if (msg.data.hasOwnProperty(0xF001)) {
                 result.illuminance_threshold = msg.data[0xF001];
             }
+            if (msg.data.hasOwnProperty('measuredValue')) {
+                const illuminance_raw = msg.data['measuredValue'];
+                const illuminance = illuminance_raw === 0 ? 0 : Math.pow(10, (illuminance_raw - 1) / 10000);
+                result.illuminance = illuminance;
+                result.illuminance_raw = illuminance_raw;
+                }
             return result;
         },
     },
@@ -266,7 +272,6 @@ const device = {
 	supports: 'on/off, occupancy, illuminance', 
 	fromZigbee: [	fz_local.ps_on_off, 
 					fz.occupancy, 
-					fz.illuminance,
                     fz_local.illuminance_config,
                     fz_local.time_config,
                     fz_local.local_time,
@@ -313,8 +318,8 @@ const device = {
 
 	exposes: [
 			e.occupancy(), 
-			e.illuminance(), 
-			e.illuminance_lux(), 
+			e.numeric('illuminance_raw', ACCESS_STATE).withDescription('Measured illuminance for threshold'),
+			e.numeric('illuminance', ACCESS_STATE).withDescription('Measured illuminance in lux').withUnit('lx'),
 			e.numeric('illuminance_threshold', ACCESS_STATE | ACCESS_WRITE | ACCESS_READ).withValueMin(0).withValueMax(50000).withDescription('Illuminance threshold'),
             e.text('local_time', ACCESS_STATE | ACCESS_READ).withDescription('Current time'),
 			e.text('min_time', ACCESS_STATE | ACCESS_WRITE | ACCESS_READ).withDescription('Day start'),
